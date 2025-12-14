@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Client;
 use App\Models\User;
+use App\Support\Permissions;
 
 class ClientPolicy
 {
@@ -12,8 +13,7 @@ class ClientPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->current_organization_id !== null
-            && $user->organizations()->whereKey($user->current_organization_id)->exists();
+        return $this->can($user, 'clients', 'viewAny', $user->current_organization_id);
     }
 
     /**
@@ -21,7 +21,8 @@ class ClientPolicy
      */
     public function view(User $user, Client $client): bool
     {
-        return $this->belongsToClientOrganization($user, $client);
+        return $this->belongsToClientOrganization($user, $client) &&
+            $this->can($user, 'clients', 'view', $client->organization_id);
     }
 
     /**
@@ -29,8 +30,7 @@ class ClientPolicy
      */
     public function create(User $user): bool
     {
-        return $user->current_organization_id !== null
-            && $user->organizations()->whereKey($user->current_organization_id)->exists();
+        return $this->can($user, 'clients', 'create', $user->current_organization_id);
     }
 
     /**
@@ -38,7 +38,8 @@ class ClientPolicy
      */
     public function update(User $user, Client $client): bool
     {
-        return $this->belongsToClientOrganization($user, $client);
+        return $this->belongsToClientOrganization($user, $client) &&
+            $this->can($user, 'clients', 'update', $client->organization_id);
     }
 
     /**
@@ -46,7 +47,8 @@ class ClientPolicy
      */
     public function delete(User $user, Client $client): bool
     {
-        return $this->belongsToClientOrganization($user, $client);
+        return $this->belongsToClientOrganization($user, $client) &&
+            $this->can($user, 'clients', 'delete', $client->organization_id);
     }
 
     /**
@@ -54,7 +56,8 @@ class ClientPolicy
      */
     public function restore(User $user, Client $client): bool
     {
-        return $this->belongsToClientOrganization($user, $client);
+        return $this->belongsToClientOrganization($user, $client) &&
+            $this->can($user, 'clients', 'delete', $client->organization_id);
     }
 
     /**
@@ -62,11 +65,23 @@ class ClientPolicy
      */
     public function forceDelete(User $user, Client $client): bool
     {
-        return $this->belongsToClientOrganization($user, $client);
+        return $this->belongsToClientOrganization($user, $client) &&
+            $this->can($user, 'clients', 'delete', $client->organization_id);
     }
 
     protected function belongsToClientOrganization(User $user, Client $client): bool
     {
         return $user->organizations()->whereKey($client->organization_id)->exists();
+    }
+
+    protected function can(User $user, string $resource, string $ability, ?int $organizationId): bool
+    {
+        if (! $organizationId) {
+            return false;
+        }
+
+        $role = Permissions::roleFor($user, $organizationId);
+
+        return Permissions::allows($role, $resource, $ability);
     }
 }
