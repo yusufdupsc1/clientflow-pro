@@ -24,6 +24,7 @@ Route::middleware(['auth', 'org'])->group(function () {
     Route::resource('clients', ClientController::class);
     Route::resource('projects', ProjectController::class);
     Route::resource('invoices', InvoiceController::class);
+    Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'storePayment'])->name('invoices.payments.store');
 });
 
 require __DIR__.'/auth.php';

@@ -18,6 +18,8 @@ return new class extends Migration
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title');
             $table->text('notes')->nullable();
+            $table->string('status')->default('draft');
+            $table->integer('amount_paid_cents')->default(0);
             $table->integer('subtotal_cents')->default(0);
             $table->integer('total_cents')->default(0);
             $table->timestamps();

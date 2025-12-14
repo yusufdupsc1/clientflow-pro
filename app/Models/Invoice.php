@@ -16,6 +16,8 @@ class Invoice extends Model
         'project_id',
         'title',
         'notes',
+        'status',
+        'amount_paid_cents',
         'subtotal_cents',
         'total_cents',
     ];

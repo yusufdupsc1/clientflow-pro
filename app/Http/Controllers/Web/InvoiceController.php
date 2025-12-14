@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Billing\CreateInvoice;
 use App\Actions\Billing\DeleteInvoice;
 use App\Actions\Billing\UpdateInvoice;
+use App\Actions\Billing\PostPayment;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\StoreInvoiceRequest;
@@ -13,6 +14,7 @@ use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Project;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class InvoiceController extends Controller
@@ -83,5 +85,27 @@ class InvoiceController extends Controller
         $deleteInvoice->handle($invoice);
 
         return redirect()->route('invoices.index');
+    }
+
+    public function storePayment(Request $request, Invoice $invoice, PostPayment $postPayment)
+    {
+        $this->authorize('update', $invoice);
+
+        $data = $request->validate([
+            'amount_cents' => ['required', 'integer', 'min:1'],
+            'provider' => ['nullable', 'string', 'max:255'],
+            'external_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $payment = $postPayment->handle($invoice, $data);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'payment_id' => $payment->id,
+                'amount_cents' => $payment->amount_cents,
+            ]);
+        }
+
+        return redirect()->route('invoices.show', $invoice);
     }
 }
