@@ -57,3 +57,15 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Quick start
+
+1. Install prerequisites (PHP with pdo_sqlite/sqlite3, Composer, Node/npm).
+2. From the project root: `composer run bootstrap`
+3. Start dev servers: `npm run dev` and `php artisan serve`
+
+## Troubleshooting
+
+- Missing sqlite drivers: install `php-sqlite3` (Debian/Ubuntu) so `pdo_sqlite` and `sqlite3` show in `php -m`.
+- Missing `public/build/manifest.json`: run `npm install` then `npm run build`.
+- If APP_KEY is missing, run `php artisan key:generate` after ensuring `.env` exists.
