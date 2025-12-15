@@ -14,7 +14,9 @@ use App\Http\Controllers\Api\ClientApiController;
 use App\Http\Controllers\Api\ProjectApiController;
 use App\Http\Controllers\Api\InvoiceApiController;
 use App\Http\Controllers\Api\PaymentApiController;
+use App\Http\Controllers\Api\AuditApiController;
 use App\Http\Controllers\Web\OrganizationSelectionController;
+use App\Http\Controllers\Web\ApiDocsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -38,7 +40,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'org'])->group(function () {
+Route::middleware(['auth', 'org', 'read.only'])->group(function () {
     Route::get('invoices/export', [ExportController::class, 'invoices'])->name('invoices.export');
     Route::get('payments/export', [ExportController::class, 'payments'])->name('payments.export');
     Route::resource('clients', ClientController::class);
@@ -59,13 +61,14 @@ Route::middleware(['auth', 'org'])->group(function () {
 Route::post('invites/{token}', [InvitationController::class, 'accept'])->name('invites.accept');
 
 Route::prefix('api')->group(function () {
-    Route::middleware(['auth:sanctum', 'org'])->group(function () {
+    Route::middleware(['auth:sanctum', 'org', 'read.only'])->group(function () {
         Route::post('organizations/{organization}/invites', [InvitationApiController::class, 'store']);
         Route::patch('organizations/{organization}/members/{user}', [InvitationApiController::class, 'updateMemberRole']);
         Route::apiResource('clients', ClientApiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::apiResource('projects', ProjectApiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::apiResource('invoices', InvoiceApiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::post('invoices/{invoice}/payments', [PaymentApiController::class, 'store']);
+        Route::get('audit', [AuditApiController::class, 'index']);
     });
 
     Route::post('invites/{token}', [InvitationApiController::class, 'accept']);
@@ -81,5 +84,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('tokens', [TokenController::class, 'webIndex'])->name('tokens.index');
     Route::delete('tokens/{token}', [TokenController::class, 'webDestroy'])->name('tokens.destroy');
 });
+
+Route::get('/api/docs', ApiDocsController::class)->name('api.docs');
 
 require __DIR__.'/auth.php';

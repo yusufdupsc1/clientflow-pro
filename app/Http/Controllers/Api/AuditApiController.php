@@ -1,22 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Web;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class AuditLogController extends Controller
+class AuditApiController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(Request $request): View
+    public function index(Request $request): JsonResource
     {
-        $user = $request->user();
-        $org = $user->currentOrganization;
-
+        $org = $request->user()->currentOrganization;
         $this->authorize('manageMembers', $org);
 
         $logs = ActivityLog::with('actor')
@@ -25,6 +23,6 @@ class AuditLogController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        return view('audit.index', compact('logs'));
+        return JsonResource::collection($logs);
     }
 }

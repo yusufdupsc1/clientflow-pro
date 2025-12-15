@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use App\Support\Activity\ActivityLogger;
+use App\Support\Webhooks\WebhookDispatcher;
 
 class InvoiceController extends Controller
 {
@@ -144,6 +145,11 @@ class InvoiceController extends Controller
             'after' => $after,
         ]);
 
+        WebhookDispatcher::dispatch('invoices.sent', $invoice->organization_id, [
+            'invoice_id' => $invoice->id,
+            'status' => $invoice->status,
+        ]);
+
         Log::info('invoice.sent', [
             'invoice_id' => $invoice->id,
             'organization_id' => $invoice->organization_id,
@@ -172,6 +178,11 @@ class InvoiceController extends Controller
         ActivityLogger::log($invoice, 'invoices.voided', $invoice->organization_id, [
             'before' => $before,
             'after' => $after,
+        ]);
+
+        WebhookDispatcher::dispatch('invoices.voided', $invoice->organization_id, [
+            'invoice_id' => $invoice->id,
+            'status' => $invoice->status,
         ]);
 
         return redirect()->route('invoices.show', $invoice);

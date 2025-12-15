@@ -97,6 +97,18 @@ TOKEN_ID=1
 curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/tokens/$TOKEN_ID
 ```
 
+## API docs & SDK stubs
+
+- API reference (markdown): `GET /api/docs` (text/markdown). See `docs/api.md`.
+- Minimal SDK stubs:
+  - PHP: `sdk/php/ClientflowApi.php`
+  - JS: `sdk/js/clientflowApi.js`
+- Example:
+```bash
+TOKEN="<plaintext>"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/clients
+```
+
 ## Roles & permissions (per organization)
 
 - **Owner:** full access to all resources in the org.
@@ -108,10 +120,10 @@ Policies enforce both org membership and the permission map above for every reso
 ## Audit & exports
 
 - Audit log (owner/admin): `GET /audit` — scoped to current org; filter by `subject_type` via query string.
-- CSV exports (tenant-scoped):
-  - `GET /invoices/export` → invoices.csv
-  - `GET /payments/export` → payments.csv
-  Returns `text/csv`; in production you can queue large exports (currently sync for tests).
+- CSV exports (tenant-scoped, filterable):
+  - `GET /invoices/export` → invoices.csv (filters: status, client_id, project_id, date_from, date_to)
+  - `GET /payments/export` → payments.csv (filters: method, date_from, date_to)
+  Returns `text/csv`; export jobs are queueable (dispatchSync in tests). Use `queue:work` for async in production.
 
 ## CI
 

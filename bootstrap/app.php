@@ -7,6 +7,8 @@ use App\Http\Middleware\EnsureOrganizationSelected;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
 use App\Console\Commands\DemoSeedCommand;
+use App\Console\Commands\SendOverdueRemindersCommand;
+use App\Http\Middleware\ReadOnlyMode;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,11 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withCommands([
         DemoSeedCommand::class,
+        SendOverdueRemindersCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'org.selected' => EnsureOrganizationSelected::class,
             'org' => EnsureOrganizationSelected::class,
+            'read.only' => ReadOnlyMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

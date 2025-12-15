@@ -44,7 +44,7 @@ class AuditExportTest extends TestCase
             'subject_id' => 1,
         ]);
 
-        $this->actingAs($owner)->get('/audit')->assertOk()->assertSee('test.action');
+        $this->actingAs($owner)->get('/audit?action=test.action')->assertOk()->assertSee('test.action');
 
         $member = User::factory()->create(['email_verified_at' => now()]);
         $org->users()->attach($member->id, ['role' => 'member']);
@@ -53,22 +53,21 @@ class AuditExportTest extends TestCase
         $this->actingAs($member)->get('/audit')->assertForbidden();
     }
 
-    public function test_exports_are_scoped_to_org(): void
+    public function test_exports_are_scoped_to_org_and_filterable(): void
     {
         [$orgA, $ownerA] = $this->orgWithOwner('expA');
         [$orgB, $ownerB] = $this->orgWithOwner('expB');
 
         $this->actingAs($ownerA);
-        ActivityLog::create([
-            'organization_id' => $orgA->id,
-            'actor_user_id' => $ownerA->id,
-            'action' => 'invoices.sent',
-            'subject_type' => 'Invoice',
-            'subject_id' => 10,
-        ]);
+        $this->post('/invoices', [
+            'title' => 'OrgA Invoice',
+            'items' => [
+                ['description' => 'Line', 'quantity' => 1, 'unit_price_cents' => 100],
+            ],
+        ])->assertRedirect();
 
         $this->actingAs($ownerA)
-            ->get('/invoices/export')
+            ->get('/invoices/export?status=draft')
             ->assertOk()
             ->assertHeader('Content-Type', 'text/csv; charset=utf-8');
 

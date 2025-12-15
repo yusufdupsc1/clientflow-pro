@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Support\Activity\ActivityLogger;
 use Illuminate\Support\Facades\Log;
+use App\Support\Webhooks\WebhookDispatcher;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PaymentReceiptMail;
 
 class PostPayment
 {
@@ -80,6 +83,15 @@ class PostPayment
                 'after' => $after,
             ]);
 
+            WebhookDispatcher::dispatch('payments.created', $invoice->organization_id, [
+                'payment_id' => $payment->id,
+                'invoice_id' => $invoice->id,
+                'amount_cents' => $payment->amount_cents,
+                'status' => $invoice->status,
+            ]);
+
+            $this->sendReceipt($invoice, $payment);
+
             Log::info('invoice.paid_progress', [
                 'invoice_id' => $invoice->id,
                 'organization_id' => $invoice->organization_id,
@@ -100,5 +112,18 @@ class PostPayment
             'amount_paid_cents' => $invoice->amount_paid_cents,
             'total_cents' => $invoice->total_cents,
         ];
+    }
+
+    protected function sendReceipt(Invoice $invoice, Payment $payment): void
+    {
+        $recipient = $invoice->client?->email
+            ?? optional($invoice->organization?->owner)->email
+            ?? auth()->user()?->email;
+
+        if (! $recipient) {
+            return;
+        }
+
+        Mail::to($recipient)->queue(new PaymentReceiptMail($invoice->fresh(), $payment));
     }
 }
