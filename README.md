@@ -140,3 +140,21 @@ GitHub Actions workflow runs on pushes/PRs (PHP 8.3 + Node 22):
 - If APP_KEY is missing, run `php artisan key:generate` after ensuring `.env` exists.
 - Node version drift: use `nvm alias default 'lts/*'` and an `.nvmrc` of `lts/*` for consistency.
 - Vite in tests: feature tests are configured to avoid requiring a build; ensure `npm run build` for local UI.
+
+## Local email (Mailpit)
+
+- Run Mailpit: `docker compose up -d` (SMTP: 1025, UI: 8025).
+- Configure `.env` (already in `.env.example`):
+  - MAIL_MAILER=smtp
+  - MAIL_HOST=127.0.0.1
+  - MAIL_PORT=1025
+  - MAIL_ENCRYPTION=null
+  - MAIL_USERNAME=null
+  - MAIL_PASSWORD=null
+  - MAIL_FROM_ADDRESS=no-reply@local.test
+- Clear config/cache after changes:
+  - `php artisan config:clear`
+  - `php artisan cache:clear`
+- View emails: http://127.0.0.1:8025
+- Queues: for local dev you may set `QUEUE_CONNECTION=sync`; if using database queue, run `php artisan queue:work`.
+- Smoke test: `php artisan mail:test you@example.com`

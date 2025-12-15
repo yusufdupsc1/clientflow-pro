@@ -8,6 +8,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
 use App\Console\Commands\DemoSeedCommand;
 use App\Console\Commands\SendOverdueRemindersCommand;
+use App\Console\Commands\MailTestCommand;
 use App\Http\Middleware\ReadOnlyMode;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         DemoSeedCommand::class,
         SendOverdueRemindersCommand::class,
+        MailTestCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
