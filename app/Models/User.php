@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Support\Permissions;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -46,5 +47,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function currentOrganization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'current_organization_id');
+    }
+
+    public function hasPermissionInOrg(string $permissionKey, int $organizationId): bool
+    {
+        $role = Permissions::roleFor($this, $organizationId);
+
+        return Permissions::allows($role, ...explode('.', $permissionKey, 2));
     }
 }

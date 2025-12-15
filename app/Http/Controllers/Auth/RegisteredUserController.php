@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use App\Support\Permissions;
 
 
 
@@ -57,6 +58,8 @@ class RegisteredUserController extends Controller
             );
 
             $user->organizations()->attach($organization->id, ['role' => 'owner']);
+            Permissions::ensureDefaultRolesForOrganization($organization->id);
+            Permissions::syncUserRole($user, $organization->id, 'owner');
 
             $user->forceFill([
                 'current_organization_id' => $organization->id,
