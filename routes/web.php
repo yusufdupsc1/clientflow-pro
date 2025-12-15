@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\ClientController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\InvoiceController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\Web\InvitationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,6 +36,11 @@ Route::middleware(['auth', 'org'])->group(function () {
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void'])->name('invoices.void');
+
+    Route::post('organizations/{organization}/invites', [InvitationController::class, 'store'])->name('organizations.invites.store');
+    Route::patch('organizations/{organization}/members/{user}', [InvitationController::class, 'updateMemberRole'])->name('organizations.members.update');
 });
+
+Route::post('invites/{token}', [InvitationController::class, 'accept'])->name('invites.accept');
 
 require __DIR__.'/auth.php';
