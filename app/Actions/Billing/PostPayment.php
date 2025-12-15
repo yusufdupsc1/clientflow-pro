@@ -14,8 +14,8 @@ class PostPayment
     {
         return DB::transaction(function () use ($invoice, $data) {
             $amount = (int) ($data['amount_cents'] ?? 0);
-            $provider = $data['provider'] ?? null;
-            $externalId = $data['external_id'] ?? null;
+            $method = $data['method'] ?? $data['provider'] ?? null;
+            $reference = $data['reference'] ?? $data['external_id'] ?? null;
 
             if ($amount <= 0) {
                 throw ValidationException::withMessages([
@@ -23,16 +23,16 @@ class PostPayment
                 ]);
             }
 
-            if ($invoice->status === 'void') {
+            if ($invoice->status !== 'sent') {
                 throw ValidationException::withMessages([
-                    'invoice' => ['Cannot pay a void invoice.'],
+                    'invoice' => ['Invoice must be sent before payment.'],
                 ]);
             }
 
-            if ($externalId !== null) {
+            if ($reference !== null) {
                 $existing = Payment::where('invoice_id', $invoice->id)
-                    ->where('provider', $provider)
-                    ->where('external_id', $externalId)
+                    ->where('method', $method)
+                    ->where('reference', $reference)
                     ->first();
 
                 if ($existing) {
@@ -52,16 +52,18 @@ class PostPayment
                 'invoice_id' => $invoice->id,
                 'amount_cents' => $amount,
                 'paid_at' => now(),
-                'provider' => $provider,
-                'external_id' => $externalId,
+                'organization_id' => $invoice->organization_id,
+                'method' => $method,
+                'reference' => $reference,
+                'provider' => $method,
+                'external_id' => $reference,
             ]);
 
             $invoice->amount_paid_cents += $amount;
 
             if ($invoice->amount_paid_cents >= $invoice->total_cents) {
                 $invoice->status = 'paid';
-            } elseif ($invoice->status === 'draft') {
-                $invoice->status = 'issued';
+                $invoice->paid_at = now();
             }
 
             $invoice->save();

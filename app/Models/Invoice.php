@@ -16,10 +16,20 @@ class Invoice extends Model
         'project_id',
         'title',
         'notes',
+        'invoice_number',
+        'due_date',
+        'sent_at',
+        'paid_at',
         'status',
         'amount_paid_cents',
         'subtotal_cents',
         'total_cents',
+    ];
+
+    protected $casts = [
+        'due_date' => 'date',
+        'sent_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     public function client(): BelongsTo
@@ -35,5 +45,10 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Actions\Billing;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 use App\Support\Activity\ActivityLogger;
+use App\Support\Tenancy\Tenant;
 
 class CreateInvoice
 {
@@ -14,11 +15,15 @@ class CreateInvoice
             $items = $data['items'] ?? [];
             unset($data['items']);
 
+            $invoiceNumber = $this->nextInvoiceNumber();
+
             $invoice = Invoice::create([
                 'client_id' => $data['client_id'] ?? null,
                 'project_id' => $data['project_id'] ?? null,
                 'title' => $data['title'],
                 'notes' => $data['notes'] ?? null,
+                'due_date' => $data['due_date'] ?? null,
+                'invoice_number' => $invoiceNumber,
                 'subtotal_cents' => 0,
                 'total_cents' => 0,
             ]);
@@ -51,5 +56,16 @@ class CreateInvoice
 
             return $invoice->fresh(['items', 'client', 'project']);
         });
+    }
+
+    protected function nextInvoiceNumber(): int
+    {
+        $tenantId = Tenant::id();
+
+        $max = Invoice::query()
+            ->when($tenantId, fn ($q) => $q->where('organization_id', $tenantId))
+            ->max('invoice_number');
+
+        return (int) $max + 1;
     }
 }

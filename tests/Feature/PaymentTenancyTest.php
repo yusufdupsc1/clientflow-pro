@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Billing\UpdateInvoice;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Support\Tenancy\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -38,13 +40,23 @@ class PaymentTenancyTest extends TestCase
         $this->assertEquals(0, $invoice->amount_paid_cents);
         $this->assertEquals('draft', $invoice->status);
 
+        Tenant::set($invoice->organization_id);
+
+        $invoice = app(UpdateInvoice::class)->handle($invoice, [
+            'status' => 'sent',
+            'title' => $invoice->title,
+            'items' => [
+                ['description' => 'Line 1', 'quantity' => 1, 'unit_price_cents' => 2000],
+            ],
+        ]);
+
         $this->actingAs($user)->post('/invoices/'.$invoice->id.'/payments', [
             'amount_cents' => 500,
         ])->assertRedirect();
 
         $invoice->refresh();
         $this->assertEquals(500, $invoice->amount_paid_cents);
-        $this->assertEquals('issued', $invoice->status);
+        $this->assertEquals('sent', $invoice->status);
 
         $this->actingAs($user)->post('/invoices/'.$invoice->id.'/payments', [
             'amount_cents' => 1500,
@@ -73,6 +85,15 @@ class PaymentTenancyTest extends TestCase
             ],
         ])->assertRedirect();
         $invoiceA = Invoice::where('title', 'A Invoice')->firstOrFail();
+        Tenant::set($invoiceA->organization_id);
+
+        $invoiceA = app(UpdateInvoice::class)->handle($invoiceA, [
+            'status' => 'sent',
+            'title' => $invoiceA->title,
+            'items' => [
+                ['description' => 'Line 1', 'quantity' => 1, 'unit_price_cents' => 100],
+            ],
+        ]);
 
         Auth::logout();
 
@@ -115,6 +136,15 @@ class PaymentTenancyTest extends TestCase
         ])->assertRedirect();
 
         $invoice = Invoice::where('title', 'Idempotent Invoice')->firstOrFail();
+        Tenant::set($invoice->organization_id);
+
+        $invoice = app(UpdateInvoice::class)->handle($invoice, [
+            'status' => 'sent',
+            'title' => $invoice->title,
+            'items' => [
+                ['description' => 'Line 1', 'quantity' => 1, 'unit_price_cents' => 1000],
+            ],
+        ]);
 
         $payload = [
             'amount_cents' => 1000,
@@ -151,6 +181,15 @@ class PaymentTenancyTest extends TestCase
         ])->assertRedirect();
 
         $invoice = Invoice::where('title', 'Overpay Invoice')->firstOrFail();
+        Tenant::set($invoice->organization_id);
+
+        $invoice = app(UpdateInvoice::class)->handle($invoice, [
+            'status' => 'sent',
+            'title' => $invoice->title,
+            'items' => [
+                ['description' => 'Line 1', 'quantity' => 1, 'unit_price_cents' => 100],
+            ],
+        ]);
 
         $response = $this->actingAs($user)->postJson('/invoices/'.$invoice->id.'/payments', [
             'amount_cents' => 200,

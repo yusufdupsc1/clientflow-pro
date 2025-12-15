@@ -38,6 +38,8 @@ class UpdateInvoiceRequest extends FormRequest
             ],
             'title' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'due_date' => ['nullable', 'date'],
+            'status' => ['nullable', 'string', Rule::in(['draft', 'sent', 'paid', 'void'])],
             'items' => ['required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
