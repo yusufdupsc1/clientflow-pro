@@ -118,6 +118,20 @@
             </div>
 
             <div class="mt-3 space-y-1">
+                @if(auth()->check() && auth()->user()->organizations->count() > 0)
+                    <div class="px-4 text-xs text-gray-500 uppercase">{{ __('Organizations') }}</div>
+                    @foreach(auth()->user()->organizations as $org)
+                        <form method="POST" action="{{ route('organizations.select.store') }}">
+                            @csrf
+                            <input type="hidden" name="organization_id" value="{{ $org->id }}">
+                            <x-responsive-nav-link :href="route('organizations.select.store')"
+                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                {{ $org->name }}
+                            </x-responsive-nav-link>
+                        </form>
+                    @endforeach
+                @endif
+
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\AuditApiController;
 use App\Http\Controllers\Web\OrganizationSelectionController;
 use App\Http\Controllers\Web\ApiDocsController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\DashboardController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -25,9 +26,9 @@ Route::get('/', function () {
 
 Route::get('/health', HealthController::class)->name('health');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'org.selected'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified', 'org.selected'])
+    ->name('dashboard');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('/organizations/select', 'organizations.select')->name('organizations.select');

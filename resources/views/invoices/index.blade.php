@@ -18,8 +18,11 @@
                         <thead>
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -31,8 +34,17 @@
                                             {{ $invoice->title }}
                                         </a>
                                     </td>
+                                    <td class="px-4 py-2">
+                                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                                            {{ ucfirst($invoice->status ?? 'draft') }}
+                                        </span>
+                                    </td>
                                     <td class="px-4 py-2">{{ $invoice->client?->name }}</td>
-                                    <td class="px-4 py-2">${{ number_format($invoice->total_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2">
+                                        {{ optional($invoice->due_date)->toFormattedDateString() ?? '—' }}
+                                    </td>
+                                    <td class="px-4 py-2">${{ number_format($invoice->amount_paid_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2">${{ number_format(($invoice->total_cents - $invoice->amount_paid_cents) / 100, 2) }}</td>
                                     <td class="px-4 py-2 text-right">
                                         <a href="{{ route('invoices.edit', $invoice) }}" class="text-indigo-600 hover:underline">
                                             {{ __('Edit') }}

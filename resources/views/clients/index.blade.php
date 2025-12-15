@@ -19,7 +19,9 @@
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -32,7 +34,9 @@
                                         </a>
                                     </td>
                                     <td class="px-4 py-2">{{ $client->email }}</td>
+                                    <td class="px-4 py-2">{{ $client->phone }}</td>
                                     <td class="px-4 py-2">{{ $client->company }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-500 truncate max-w-xs">{{ $client->notes }}</td>
                                     <td class="px-4 py-2 text-right">
                                         <a href="{{ route('clients.edit', $client) }}" class="text-indigo-600 hover:underline">
                                             {{ __('Edit') }}
