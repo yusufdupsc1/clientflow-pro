@@ -124,12 +124,15 @@ class InvoiceController extends Controller
             abort(response()->json(['message' => 'Invoice cannot be sent in its current state.'], 422));
         }
 
+        $before = $this->snapshot($invoice);
+
         if ($invoice->status !== 'sent') {
             $invoice->status = 'sent';
             $invoice->sent_at = now();
             $invoice->save();
         }
 
+        $after = $this->snapshot($invoice);
         $pdf = $this->generatePdf($invoice);
         Mail::to($invoice->client?->email ?? auth()->user()->email)
             ->queue(new InvoiceSentMail($invoice, $pdf));
@@ -137,12 +140,38 @@ class InvoiceController extends Controller
         ActivityLogger::log($invoice, 'invoices.sent', $invoice->organization_id, [
             'status' => $invoice->status,
             'sent_at' => $invoice->sent_at?->toIso8601String(),
+            'before' => $before,
+            'after' => $after,
         ]);
 
         Log::info('invoice.sent', [
             'invoice_id' => $invoice->id,
             'organization_id' => $invoice->organization_id,
             'status' => $invoice->status,
+        ]);
+
+        return redirect()->route('invoices.show', $invoice);
+    }
+
+    public function void(Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('update', $invoice);
+
+        if ($invoice->status !== 'sent') {
+            abort(response()->json(['message' => 'Only sent invoices can be voided.'], 422));
+        }
+
+        $before = $this->snapshot($invoice);
+
+        $invoice->status = 'void';
+        $invoice->paid_at = null;
+        $invoice->save();
+
+        $after = $this->snapshot($invoice);
+
+        ActivityLogger::log($invoice, 'invoices.voided', $invoice->organization_id, [
+            'before' => $before,
+            'after' => $after,
         ]);
 
         return redirect()->route('invoices.show', $invoice);
@@ -186,5 +215,16 @@ class InvoiceController extends Controller
     protected function escapePdfText(string $text): string
     {
         return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
+    }
+
+    protected function snapshot(Invoice $invoice): array
+    {
+        return [
+            'status' => $invoice->status,
+            'sent_at' => optional($invoice->sent_at)->toIso8601String(),
+            'paid_at' => optional($invoice->paid_at)->toIso8601String(),
+            'amount_paid_cents' => $invoice->amount_paid_cents,
+            'total_cents' => $invoice->total_cents,
+        ];
     }
 }

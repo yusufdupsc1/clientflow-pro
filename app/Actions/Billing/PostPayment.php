@@ -17,6 +17,7 @@ class PostPayment
             $amount = (int) ($data['amount_cents'] ?? 0);
             $method = $data['method'] ?? $data['provider'] ?? null;
             $reference = $data['reference'] ?? $data['external_id'] ?? null;
+            $before = $this->snapshot($invoice);
 
             if ($amount <= 0) {
                 throw ValidationException::withMessages([
@@ -68,12 +69,15 @@ class PostPayment
             }
 
             $invoice->save();
+            $after = $this->snapshot($invoice);
 
             ActivityLogger::log($payment, 'payments.created', $invoice->organization_id, [
                 'invoice_id' => $invoice->id,
                 'amount_cents' => $payment->amount_cents,
                 'provider' => $payment->provider,
                 'external_id' => $payment->external_id,
+                'before' => $before,
+                'after' => $after,
             ]);
 
             Log::info('invoice.paid_progress', [
@@ -85,5 +89,16 @@ class PostPayment
 
             return $payment;
         });
+    }
+
+    protected function snapshot(Invoice $invoice): array
+    {
+        return [
+            'status' => $invoice->status,
+            'sent_at' => optional($invoice->sent_at)->toIso8601String(),
+            'paid_at' => optional($invoice->paid_at)->toIso8601String(),
+            'amount_paid_cents' => $invoice->amount_paid_cents,
+            'total_cents' => $invoice->total_cents,
+        ];
     }
 }
