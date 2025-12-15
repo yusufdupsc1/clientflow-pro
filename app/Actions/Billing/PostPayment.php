@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Support\Activity\ActivityLogger;
 
 class PostPayment
 {
@@ -64,6 +65,13 @@ class PostPayment
             }
 
             $invoice->save();
+
+            ActivityLogger::log($payment, 'payments.created', $invoice->organization_id, [
+                'invoice_id' => $invoice->id,
+                'amount_cents' => $payment->amount_cents,
+                'provider' => $payment->provider,
+                'external_id' => $payment->external_id,
+            ]);
 
             return $payment;
         });

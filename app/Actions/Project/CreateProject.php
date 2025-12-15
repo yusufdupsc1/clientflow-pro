@@ -3,11 +3,16 @@
 namespace App\Actions\Project;
 
 use App\Models\Project;
+use App\Support\Activity\ActivityLogger;
 
 class CreateProject
 {
     public function handle(array $data): Project
     {
-        return Project::create($data);
+        $project = Project::create($data);
+
+        ActivityLogger::log($project, 'projects.created');
+
+        return $project;
     }
 }

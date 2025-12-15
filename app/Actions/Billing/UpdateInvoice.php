@@ -4,6 +4,7 @@ namespace App\Actions\Billing;
 
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
+use App\Support\Activity\ActivityLogger;
 
 class UpdateInvoice
 {
@@ -45,6 +46,8 @@ class UpdateInvoice
                 'subtotal_cents' => $subtotal,
                 'total_cents' => $subtotal,
             ])->save();
+
+            ActivityLogger::log($invoice, 'invoices.updated');
 
             return $invoice->fresh(['items', 'client', 'project']);
         });
