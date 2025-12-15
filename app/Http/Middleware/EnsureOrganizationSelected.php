@@ -26,13 +26,13 @@ class EnsureOrganizationSelected
         }
 
         if ($user->current_organization_id === null) {
-            abort(403, 'No organization selected.');
+            return redirect()->route('organizations.select');
         }
 
         $organization = $user->currentOrganization;
 
         if (! $organization instanceof Organization || $organization->getKey() !== $user->current_organization_id) {
-            abort(403, 'No organization selected.');
+            return redirect()->route('organizations.select');
         }
 
         $belongsToOrganization = $user->organizations()->whereKey($organization->getKey())->exists();
