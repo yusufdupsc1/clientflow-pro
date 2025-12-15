@@ -15,11 +15,49 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @php
+                        $currentOrg = auth()->user()?->currentOrganization;
+                        $role = $currentOrg ? \App\Support\Permissions::roleFor(auth()->user(), $currentOrg->id) : null;
+                    @endphp
+                    @if(in_array($role, ['owner', 'admin'], true))
+                        <x-nav-link :href="route('invitations.index')" :active="request()->routeIs('invitations.index')">
+                            {{ __('Invitations') }}
+                        </x-nav-link>
+                    @endif
+                    <x-nav-link :href="route('tokens.index')" :active="request()->routeIs('tokens.index')">
+                        {{ __('Tokens') }}
+                    </x-nav-link>
                 </div>
             </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                @if(auth()->check() && auth()->user()->organizations->count() > 0)
+                    <x-dropdown align="right" width="48">
+                        <x-slot name="trigger">
+                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
+                                <div>{{ $currentOrg->name ?? __('No Organization') }}</div>
+                                <div class="ms-1">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                            </button>
+                        </x-slot>
+                        <x-slot name="content">
+                            @foreach(auth()->user()->organizations as $org)
+                                <form method="POST" action="{{ route('organizations.select.store') }}">
+                                    @csrf
+                                    <input type="hidden" name="organization_id" value="{{ $org->id }}">
+                                    <x-dropdown-link :href="route('organizations.select.store')"
+                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                        {{ $org->name }}
+                                    </x-dropdown-link>
+                                </form>
+                            @endforeach
+                        </x-slot>
+                    </x-dropdown>
+                @endif
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">

@@ -66,6 +66,53 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 4. Health check: `curl http://localhost:8000/health`
 5. Seed demo data (optional): `php artisan app:demo-seed`
 
+## API authentication (tokens)
+
+Sanctum personal access tokens are tied to the authenticated user and their current organization; policies still enforce org membership/roles.
+
+Issue a token (session auth):
+```bash
+curl -X POST http://localhost:8000/api/tokens -b "your_session_cookie" | jq .
+# => { "token": "<plaintext>", "token_id": 1 }
+```
+
+Use the token (invite example):
+```bash
+TOKEN="<plaintext>"
+ORG=1
+curl -X POST http://localhost:8000/api/organizations/$ORG/invites \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"apiuser@example.com","role":"member"}'
+```
+
+List your tokens:
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/tokens
+```
+
+Revoke a token:
+```bash
+TOKEN_ID=1
+curl -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/tokens/$TOKEN_ID
+```
+
+## Roles & permissions (per organization)
+
+- **Owner:** full access to all resources in the org.
+- **Admin:** manage clients, projects, invoices, payments, invites, member roles.
+- **Member:** read-only (view clients/projects/invoices/payments); cannot create/update/delete.
+
+Policies enforce both org membership and the permission map above for every resource.
+
+## Audit & exports
+
+- Audit log (owner/admin): `GET /audit` — scoped to current org; filter by `subject_type` via query string.
+- CSV exports (tenant-scoped):
+  - `GET /invoices/export` → invoices.csv
+  - `GET /payments/export` → payments.csv
+  Returns `text/csv`; in production you can queue large exports (currently sync for tests).
+
 ## CI
 
 GitHub Actions workflow runs on pushes/PRs (PHP 8.3 + Node 22):
@@ -81,9 +128,3 @@ GitHub Actions workflow runs on pushes/PRs (PHP 8.3 + Node 22):
 - If APP_KEY is missing, run `php artisan key:generate` after ensuring `.env` exists.
 - Node version drift: use `nvm alias default 'lts/*'` and an `.nvmrc` of `lts/*` for consistency.
 - Vite in tests: feature tests are configured to avoid requiring a build; ensure `npm run build` for local UI.
-
-## Troubleshooting
-
-- Missing sqlite drivers: install `php-sqlite3` (Debian/Ubuntu) so `pdo_sqlite` and `sqlite3` show in `php -m`.
-- Missing `public/build/manifest.json`: run `npm install` then `npm run build`.
-- If APP_KEY is missing, run `php artisan key:generate` after ensuring `.env` exists.

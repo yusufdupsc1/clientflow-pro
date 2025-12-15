@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Web;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -8,39 +8,17 @@ use App\Models\Invitation;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Permissions;
-use Illuminate\Contracts\View\View;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-class InvitationController extends Controller
+class InvitationApiController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(Request $request): View
-    {
-        $user = $request->user();
-        $organization = $user->currentOrganization;
-
-        if (! $organization) {
-            abort(403);
-        }
-
-        $this->authorize('manageMembers', $organization);
-
-        $invitations = Invitation::where('organization_id', $organization->id)
-            ->latest()
-            ->get();
-
-        return view('invitations.index', [
-            'organization' => $organization,
-            'invitations' => $invitations,
-        ]);
-    }
-
-    public function store(Request $request, Organization $organization): RedirectResponse
+    public function store(Request $request, Organization $organization): JsonResponse
     {
         $this->authorize('manageMembers', $organization);
 
@@ -51,30 +29,33 @@ class InvitationController extends Controller
 
         $token = Str::random(40);
 
-        Invitation::create([
+        $invitation = Invitation::create([
             'organization_id' => $organization->id,
             'email' => strtolower($data['email']),
             'role' => $data['role'],
             'token' => $token,
         ]);
 
-        return redirect()->back();
+        return response()->json($invitation, 201);
     }
 
-    public function accept(Request $request, string $token): RedirectResponse
+    public function accept(Request $request, string $token): JsonResponse
     {
-        $invitation = Invitation::where('token', $token)->whereNull('accepted_at')->firstOrFail();
+        $invitation = Invitation::where('token', $token)
+            ->whereNull('accepted_at')
+            ->firstOrFail();
+
         $organization = $invitation->organization;
 
-        $existingUser = User::where('email', $invitation->email)->first();
+        $user = User::where('email', $invitation->email)->first();
 
-        if (! $existingUser) {
+        if (! $user) {
             $payload = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'password' => ['required', 'confirmed', 'min:8'],
             ]);
 
-            $existingUser = User::create([
+            $user = User::create([
                 'name' => $payload['name'],
                 'email' => $invitation->email,
                 'password' => Hash::make($payload['password']),
@@ -84,23 +65,26 @@ class InvitationController extends Controller
         }
 
         $organization->users()->syncWithoutDetaching([
-            $existingUser->id => ['role' => $invitation->role],
+            $user->id => ['role' => $invitation->role],
         ]);
 
-        Permissions::syncUserRole($existingUser, $organization->id, $invitation->role);
-        $existingUser->forceFill(['current_organization_id' => $organization->id])->save();
+        Permissions::syncUserRole($user, $organization->id, $invitation->role);
+
+        $user->forceFill(['current_organization_id' => $organization->id])->save();
 
         $invitation->forceFill([
             'accepted_at' => now(),
             'token' => null,
         ])->save();
 
-        Auth::login($existingUser);
-
-        return redirect()->route('dashboard');
+        return response()->json([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+            'role' => $invitation->role,
+        ]);
     }
 
-    public function updateMemberRole(Request $request, Organization $organization, User $user): RedirectResponse
+    public function updateMemberRole(Request $request, Organization $organization, User $user): JsonResponse
     {
         $this->authorize('manageMembers', $organization);
 
@@ -115,7 +99,10 @@ class InvitationController extends Controller
         $organization->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
         Permissions::syncUserRole($user, $organization->id, $data['role']);
 
-        return redirect()->back();
+        return response()->json([
+            'organization_id' => $organization->id,
+            'user_id' => $user->id,
+            'role' => $data['role'],
+        ]);
     }
-
 }

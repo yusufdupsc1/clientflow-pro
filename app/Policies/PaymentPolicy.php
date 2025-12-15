@@ -8,6 +8,14 @@ use App\Support\Permissions;
 
 class PaymentPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        $orgId = $user->current_organization_id;
+        $role = Permissions::roleFor($user, $orgId);
+
+        return Permissions::allows($role, 'payments', 'viewAny');
+    }
+
     public function create(User $user, Payment $payment): bool
     {
         return $user->organizations()->whereKey($payment->invoice->organization_id)->exists()
