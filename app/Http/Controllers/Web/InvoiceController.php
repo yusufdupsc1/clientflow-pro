@@ -18,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use App\Support\Activity\ActivityLogger;
 
@@ -136,6 +137,12 @@ class InvoiceController extends Controller
         ActivityLogger::log($invoice, 'invoices.sent', $invoice->organization_id, [
             'status' => $invoice->status,
             'sent_at' => $invoice->sent_at?->toIso8601String(),
+        ]);
+
+        Log::info('invoice.sent', [
+            'invoice_id' => $invoice->id,
+            'organization_id' => $invoice->organization_id,
+            'status' => $invoice->status,
         ]);
 
         return redirect()->route('invoices.show', $invoice);

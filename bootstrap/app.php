@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\EnsureOrganizationSelected;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
+use App\Console\Commands\DemoSeedCommand;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
         AppServiceProvider::class,
         AuthServiceProvider::class,
+    ])
+    ->withCommands([
+        DemoSeedCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

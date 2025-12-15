@@ -63,6 +63,24 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 1. Install prerequisites (PHP with pdo_sqlite/sqlite3, Composer, Node/npm).
 2. From the project root: `composer run bootstrap`
 3. Start dev servers: `npm run dev` and `php artisan serve`
+4. Health check: `curl http://localhost:8000/health`
+5. Seed demo data (optional): `php artisan app:demo-seed`
+
+## CI
+
+GitHub Actions workflow runs on pushes/PRs (PHP 8.3 + Node 22):
+- composer install
+- npm ci && npm run build
+- php artisan migrate:fresh
+- php artisan test
+
+## Troubleshooting
+
+- Missing sqlite drivers: install `php-sqlite3` (Debian/Ubuntu) so `pdo_sqlite` and `sqlite3` show in `php -m`.
+- Missing `public/build/manifest.json`: run `npm install` then `npm run build`.
+- If APP_KEY is missing, run `php artisan key:generate` after ensuring `.env` exists.
+- Node version drift: use `nvm alias default 'lts/*'` and an `.nvmrc` of `lts/*` for consistency.
+- Vite in tests: feature tests are configured to avoid requiring a build; ensure `npm run build` for local UI.
 
 ## Troubleshooting
 

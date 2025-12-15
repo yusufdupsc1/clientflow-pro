@@ -4,11 +4,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Web\ClientController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\InvoiceController;
+use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/health', HealthController::class)->name('health');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

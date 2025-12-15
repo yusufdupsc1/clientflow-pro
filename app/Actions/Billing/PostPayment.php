@@ -7,6 +7,7 @@ use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Support\Activity\ActivityLogger;
+use Illuminate\Support\Facades\Log;
 
 class PostPayment
 {
@@ -73,6 +74,13 @@ class PostPayment
                 'amount_cents' => $payment->amount_cents,
                 'provider' => $payment->provider,
                 'external_id' => $payment->external_id,
+            ]);
+
+            Log::info('invoice.paid_progress', [
+                'invoice_id' => $invoice->id,
+                'organization_id' => $invoice->organization_id,
+                'amount_paid_cents' => $invoice->amount_paid_cents,
+                'status' => $invoice->status,
             ]);
 
             return $payment;
