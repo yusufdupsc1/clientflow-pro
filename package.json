@@ -2,9 +2,15 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": ">=24 <25"
+    },
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "check:node": "node scripts/check-node-lts.js",
+        "dev": "vite",
+        "preinstall": "node scripts/check-node-lts.js",
+        "refresh:lts": "sh scripts/refresh-lts.sh"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
