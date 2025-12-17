@@ -20,7 +20,7 @@
 
                         <div>
                             <x-input-label for="client_id" :value="__('Client')" />
-                            <select id="client_id" name="client_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <select id="client_id" name="client_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 shadow-sm">
                                 <option value="">{{ __('None') }}</option>
                                 @foreach ($clients as $client)
                                     <option value="{{ $client->id }}" @selected(old('client_id') == $client->id)>
@@ -33,7 +33,7 @@
 
                         <div>
                             <x-input-label for="project_id" :value="__('Project')" />
-                            <select id="project_id" name="project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <select id="project_id" name="project_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 shadow-sm">
                                 <option value="">{{ __('None') }}</option>
                                 @foreach ($projects as $project)
                                     <option value="{{ $project->id }}" @selected(old('project_id') == $project->id)>
@@ -48,6 +48,32 @@
                             <x-input-label for="notes" :value="__('Notes')" />
                             <textarea id="notes" name="notes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old('notes') }}</textarea>
                             <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="due_date" :value="__('Due Date')" />
+                                <x-text-input id="due_date" name="due_date" type="date" class="mt-1 block w-full" :value="old('due_date')" />
+                                <x-input-error :messages="$errors->get('due_date')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="currency" :value="__('Currency (ISO)')" />
+                                <x-text-input id="currency" name="currency" type="text" maxlength="3" class="mt-1 block w-full uppercase" :value="old('currency', $defaultCurrency)" />
+                                <x-input-error :messages="$errors->get('currency')" class="mt-2" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="tax_rate_percent" :value="__('Tax / VAT %')" />
+                                <x-text-input id="tax_rate_percent" name="tax_rate_percent" type="number" min="0" step="0.01" class="mt-1 block w-full" :value="old('tax_rate_percent', 0)" />
+                                <x-input-error :messages="$errors->get('tax_rate_percent')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="discount_cents" :value="__('Discount (cents)')" />
+                                <x-text-input id="discount_cents" name="discount_cents" type="number" min="0" class="mt-1 block w-full" :value="old('discount_cents', 0)" />
+                                <x-input-error :messages="$errors->get('discount_cents')" class="mt-2" />
+                            </div>
                         </div>
 
                         <div>

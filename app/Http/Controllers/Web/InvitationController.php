@@ -13,7 +13,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Mail\RoleChangedMail;
 
 class InvitationController extends Controller
 {
@@ -114,6 +116,10 @@ class InvitationController extends Controller
 
         $organization->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
         Permissions::syncUserRole($user, $organization->id, $data['role']);
+
+        if ($user->email) {
+            Mail::to($user->email)->queue(new RoleChangedMail($organization, $data['role']));
+        }
 
         return redirect()->back();
     }

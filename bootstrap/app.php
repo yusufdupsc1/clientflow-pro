@@ -10,6 +10,8 @@ use App\Console\Commands\DemoSeedCommand;
 use App\Console\Commands\SendOverdueRemindersCommand;
 use App\Console\Commands\MailTestCommand;
 use App\Http\Middleware\ReadOnlyMode;
+use App\Console\Commands\MarkOverdueInvoicesCommand;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,7 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
         DemoSeedCommand::class,
         SendOverdueRemindersCommand::class,
         MailTestCommand::class,
+        MarkOverdueInvoicesCommand::class,
     ])
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command(MarkOverdueInvoicesCommand::class)->dailyAt('01:00');
+        $schedule->command(SendOverdueRemindersCommand::class)->dailyAt('02:00');
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'org.selected' => EnsureOrganizationSelected::class,

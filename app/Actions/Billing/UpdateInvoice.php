@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 use App\Support\Activity\ActivityLogger;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
 class UpdateInvoice
 {
@@ -19,12 +20,22 @@ class UpdateInvoice
             $desiredStatus = $data['status'] ?? $invoice->status;
             unset($data['status']);
 
+            $orgCurrency = auth()->user()?->currentOrganization?->default_currency;
+            $currency = strtoupper($data['currency'] ?? $invoice->currency ?? $orgCurrency ?? config('stripe.default_currency', 'USD'));
+            $discount = max(0, (int) ($data['discount_cents'] ?? $invoice->discount_cents ?? 0));
+            $taxRate = (float) ($data['tax_rate_percent'] ?? $invoice->tax_rate_percent ?? 0);
+
             $this->assertStatusTransitionAllowed($invoice, $desiredStatus, $items);
+
+            if (! $invoice->public_hash) {
+                $invoice->public_hash = Str::uuid()->toString();
+            }
 
             // Locked invoices: allow notes-only updates
             if (in_array($invoice->status, ['paid', 'void'], true)) {
                 $invoice->fill([
                     'notes' => $data['notes'] ?? $invoice->notes,
+                    'public_hash' => $invoice->public_hash,
                 ])->save();
 
                 return $invoice->refresh(['items', 'client', 'project']);
@@ -37,6 +48,7 @@ class UpdateInvoice
                 'notes' => $data['notes'] ?? null,
                 'due_date' => $data['due_date'] ?? $invoice->due_date,
                 'status' => $desiredStatus,
+                'currency' => $currency,
             ])->save();
 
             $invoice->items()->delete();
@@ -60,9 +72,16 @@ class UpdateInvoice
                 $invoice->items()->createMany($preparedItems);
             }
 
+            $taxable = max($subtotal - $discount, 0);
+            $taxCents = (int) round($taxable * ($taxRate / 100));
+            $total = max(0, $taxable + $taxCents);
+
             $invoice->forceFill([
                 'subtotal_cents' => $subtotal,
-                'total_cents' => $subtotal,
+                'discount_cents' => $discount,
+                'tax_cents' => $taxCents,
+                'tax_rate_percent' => $taxRate,
+                'total_cents' => $total,
             ])->save();
 
             if ($currentStatus === 'draft' && $desiredStatus === 'sent') {
@@ -79,7 +98,7 @@ class UpdateInvoice
 
     protected function assertStatusTransitionAllowed(Invoice $invoice, string $desiredStatus, array $items): void
     {
-        $allowed = ['draft', 'sent', 'paid', 'void'];
+        $allowed = ['draft', 'sent', 'overdue', 'paid', 'void'];
         if (! in_array($desiredStatus, $allowed, true)) {
             throw ValidationException::withMessages(['status' => ['Invalid status.']]);
         }

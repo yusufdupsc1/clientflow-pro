@@ -20,7 +20,7 @@ class SendOverdueRemindersCommand extends Command
         $now = now()->startOfDay();
 
         $invoices = Invoice::with(['client', 'organization.owner'])
-            ->where('status', 'sent')
+            ->whereIn('status', ['sent', 'overdue'])
             ->whereNull('paid_at')
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', $now)

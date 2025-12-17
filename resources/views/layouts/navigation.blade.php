@@ -23,6 +23,9 @@
                         <x-nav-link :href="route('invitations.index')" :active="request()->routeIs('invitations.index')">
                             {{ __('Invitations') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('settings.profile')" :active="request()->routeIs('settings.*')">
+                            {{ __('Settings') }}
+                        </x-nav-link>
                     @endif
                     <x-nav-link :href="route('tokens.index')" :active="request()->routeIs('tokens.index')">
                         {{ __('Tokens') }}
@@ -130,6 +133,12 @@
                             </x-responsive-nav-link>
                         </form>
                     @endforeach
+                @endif
+
+                @if(isset($role) && in_array($role, ['owner', 'admin'], true))
+                    <x-responsive-nav-link :href="route('settings.profile')" :active="request()->routeIs('settings.*')">
+                        {{ __('Settings') }}
+                    </x-responsive-nav-link>
                 @endif
 
                 <x-responsive-nav-link :href="route('profile.edit')">

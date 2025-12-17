@@ -43,8 +43,8 @@
                                     <td class="px-4 py-2">
                                         {{ optional($invoice->due_date)->toFormattedDateString() ?? '—' }}
                                     </td>
-                                    <td class="px-4 py-2">${{ number_format($invoice->amount_paid_cents / 100, 2) }}</td>
-                                    <td class="px-4 py-2">${{ number_format(($invoice->total_cents - $invoice->amount_paid_cents) / 100, 2) }}</td>
+                                    <td class="px-4 py-2">{{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->amount_paid_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2">{{ $invoice->currency ?? 'USD' }} {{ number_format(($invoice->total_cents - $invoice->amount_paid_cents) / 100, 2) }}</td>
                                     <td class="px-4 py-2 text-right">
                                         <a href="{{ route('invoices.edit', $invoice) }}" class="text-indigo-600 hover:underline">
                                             {{ __('Edit') }}

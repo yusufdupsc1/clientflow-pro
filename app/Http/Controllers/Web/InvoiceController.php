@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use App\Support\Activity\ActivityLogger;
 use App\Support\Webhooks\WebhookDispatcher;
+use App\Services\InvoicePdfService;
 
 class InvoiceController extends Controller
 {
@@ -42,8 +43,9 @@ class InvoiceController extends Controller
 
         $clients = Client::orderBy('name')->get();
         $projects = Project::orderBy('name')->get();
+        $defaultCurrency = auth()->user()?->currentOrganization?->default_currency ?? config('stripe.default_currency', 'USD');
 
-        return view('invoices.create', compact('clients', 'projects'));
+        return view('invoices.create', compact('clients', 'projects', 'defaultCurrency'));
     }
 
     public function store(StoreInvoiceRequest $request, CreateInvoice $createInvoice): RedirectResponse
@@ -71,8 +73,9 @@ class InvoiceController extends Controller
         $clients = Client::orderBy('name')->get();
         $projects = Project::orderBy('name')->get();
         $invoice->load('items');
+        $defaultCurrency = auth()->user()?->currentOrganization?->default_currency ?? config('stripe.default_currency', 'USD');
 
-        return view('invoices.edit', compact('invoice', 'clients', 'projects'));
+        return view('invoices.edit', compact('invoice', 'clients', 'projects', 'defaultCurrency'));
     }
 
     public function update(UpdateInvoiceRequest $request, Invoice $invoice, UpdateInvoice $updateInvoice): RedirectResponse
@@ -134,9 +137,8 @@ class InvoiceController extends Controller
         }
 
         $after = $this->snapshot($invoice);
-        $pdf = $this->generatePdf($invoice);
         Mail::to($invoice->client?->email ?? auth()->user()->email)
-            ->queue(new InvoiceSentMail($invoice, $pdf));
+            ->queue(new InvoiceSentMail($invoice));
 
         ActivityLogger::log($invoice, 'invoices.sent', $invoice->organization_id, [
             'status' => $invoice->status,
@@ -163,7 +165,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        if ($invoice->status !== 'sent') {
+        if (! in_array($invoice->status, ['sent', 'overdue'], true)) {
             abort(response()->json(['message' => 'Only sent invoices can be voided.'], 422));
         }
 
@@ -192,40 +194,11 @@ class InvoiceController extends Controller
     {
         $this->authorize('view', $invoice);
 
-        $pdf = $this->generatePdf($invoice);
+        $pdf = app(InvoicePdfService::class)->render($invoice);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
         ]);
-    }
-
-    protected function generatePdf(Invoice $invoice): string
-    {
-        $invoice->loadMissing(['items', 'client', 'project']);
-        $content = "%PDF-1.4\n";
-        $content .= "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n";
-        $content .= "2 0 obj <</Type /Pages /Count 1 /Kids [3 0 R]>> endobj\n";
-
-        $body = "Invoice #{$invoice->invoice_number}\n";
-        $body .= "Total: ".number_format($invoice->total_cents / 100, 2)."\n";
-        foreach ($invoice->items as $item) {
-            $body .= "{$item->description} {$item->quantity} x {$item->unit_price_cents}\n";
-        }
-
-        $stream = "BT /F1 12 Tf 50 750 Td ({$this->escapePdfText($body)}) Tj ET";
-        $len = strlen($stream);
-        $content .= "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>>>> endobj\n";
-        $content .= "4 0 obj <</Length {$len}>> stream\n{$stream}\nendstream endobj\n";
-        $content .= "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n";
-        $content .= "xref\n0 6\n0000000000 65535 f \n";
-        $content .= "trailer <</Size 6 /Root 1 0 R>>\nstartxref\n".strlen($content)."\n%%EOF";
-
-        return $content;
-    }
-
-    protected function escapePdfText(string $text): string
-    {
-        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
     }
 
     protected function snapshot(Invoice $invoice): array

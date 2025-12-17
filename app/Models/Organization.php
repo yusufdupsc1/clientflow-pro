@@ -13,6 +13,18 @@ class Organization extends Model
         'name',
         'slug',
         'owner_user_id',
+        'billing_email',
+        'tax_id',
+        'default_currency',
+        'stripe_mode',
+        'stripe_live_secret',
+        'stripe_live_publishable_key',
+        'stripe_live_webhook_secret',
+        'stripe_test_secret',
+        'stripe_test_publishable_key',
+        'stripe_test_webhook_secret',
+        'branding_logo_path',
+        'branding_color',
     ];
 
     public function owner(): BelongsTo

@@ -11,8 +11,12 @@
                 <div class="p-6 text-gray-900 space-y-2">
                     <div><span class="font-semibold">{{ __('Client:') }}</span> {{ $invoice->client?->name }}</div>
                     <div><span class="font-semibold">{{ __('Project:') }}</span> {{ $invoice->project?->name }}</div>
-                    <div><span class="font-semibold">{{ __('Subtotal:') }}</span> ${{ number_format($invoice->subtotal_cents / 100, 2) }}</div>
-                    <div><span class="font-semibold">{{ __('Total:') }}</span> ${{ number_format($invoice->total_cents / 100, 2) }}</div>
+                    <div><span class="font-semibold">{{ __('Subtotal:') }}</span> {{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->subtotal_cents / 100, 2) }}</div>
+                    <div><span class="font-semibold">{{ __('Discount:') }}</span> {{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->discount_cents / 100, 2) }}</div>
+                    <div><span class="font-semibold">{{ __('Tax:') }}</span> {{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->tax_cents / 100, 2) }} ({{ $invoice->tax_rate_percent }}%)</div>
+                    <div><span class="font-semibold">{{ __('Total:') }}</span> {{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->total_cents / 100, 2) }}</div>
+                    <div><span class="font-semibold">{{ __('Currency:') }}</span> {{ $invoice->currency ?? 'USD' }}</div>
+                    <div><span class="font-semibold">{{ __('Due Date:') }}</span> {{ optional($invoice->due_date)->toFormattedDateString() ?? __('Not set') }}</div>
                     <div><span class="font-semibold">{{ __('Notes:') }}</span> {{ $invoice->notes }}</div>
                 </div>
                 <div class="p-6 border-t">
@@ -31,12 +35,22 @@
                                 <tr>
                                     <td class="px-4 py-2">{{ $item->description }}</td>
                                     <td class="px-4 py-2 text-right">{{ $item->quantity }}</td>
-                                    <td class="px-4 py-2 text-right">${{ number_format($item->unit_price_cents / 100, 2) }}</td>
-                                    <td class="px-4 py-2 text-right">${{ number_format($item->line_total_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2 text-right">{{ $invoice->currency ?? 'USD' }} {{ number_format($item->unit_price_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2 text-right">{{ $invoice->currency ?? 'USD' }} {{ number_format($item->line_total_cents / 100, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                </div>
+                <div class="p-6 border-t space-y-2">
+                    <div class="font-semibold">{{ __('Public payment link') }}</div>
+                    @if($invoice->public_hash)
+                        <a class="text-indigo-600 hover:underline break-all" href="{{ route('pay.invoices.show', $invoice->public_hash) }}">
+                            {{ route('pay.invoices.show', $invoice->public_hash) }}
+                        </a>
+                    @else
+                        <p class="text-gray-600 text-sm">{{ __('Generate a payment link after saving the invoice.') }}</p>
+                    @endif
                 </div>
                 <div class="p-6 border-t flex justify-between">
                     <a href="{{ route('invoices.edit', $invoice) }}" class="text-indigo-600 hover:underline">

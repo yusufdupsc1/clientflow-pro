@@ -14,4 +14,9 @@ class OrganizationPolicy
 
         return in_array($role, ['owner', 'admin'], true);
     }
+
+    public function manageSettings(User $user, Organization $organization): bool
+    {
+        return $this->manageMembers($user, $organization);
+    }
 }

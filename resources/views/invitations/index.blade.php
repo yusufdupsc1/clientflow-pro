@@ -12,19 +12,21 @@
                 <form method="POST" action="{{ route('organizations.invites.store', $organization) }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                        <input name="email" type="email" required class="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm" />
+                        <x-input-label for="invite_email" :value="__('Email')" />
+                        <x-text-input id="invite_email" name="email" type="email" class="mt-1 block w-full" required />
+                        <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-                        <select name="role" class="mt-1 block w-full border-gray-300 dark:border-gray-700 rounded-md shadow-sm">
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
-                            <option value="owner">Owner</option>
+                        <x-input-label for="invite_role" :value="__('Role')" />
+                        <select id="invite_role" name="role" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 shadow-sm">
+                            <option value="member">{{ __('Member') }}</option>
+                            <option value="admin">{{ __('Admin') }}</option>
+                            <option value="owner">{{ __('Owner') }}</option>
                         </select>
+                        <x-input-error :messages="$errors->get('role')" class="mt-2" />
                     </div>
                     <div>
-                        <x-primary-button>Send Invite</x-primary-button>
+                        <x-primary-button>{{ __('Send invite') }}</x-primary-button>
                     </div>
                 </form>
             </div>

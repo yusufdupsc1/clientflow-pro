@@ -17,8 +17,12 @@ use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Api\AuditApiController;
 use App\Http\Controllers\Web\OrganizationSelectionController;
 use App\Http\Controllers\Web\ApiDocsController;
+use App\Http\Controllers\Webhooks\StripeWebhookController;
+use App\Http\Controllers\PublicPages\InvoicePaymentController;
+use App\Http\Controllers\Web\OrganizationSettingsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\DashboardController;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 
 Route::get('/', function () {
     return view('welcome');
@@ -29,6 +33,15 @@ Route::get('/health', HealthController::class)->name('health');
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified', 'org.selected'])
     ->name('dashboard');
+
+Route::post('/stripe/webhook', StripeWebhookController::class)
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('webhooks.stripe');
+
+Route::prefix('pay')->group(function () {
+    Route::get('{public_hash}', [InvoicePaymentController::class, 'show'])->name('pay.invoices.show');
+    Route::post('{public_hash}/checkout', [InvoicePaymentController::class, 'checkout'])->name('pay.invoices.checkout');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('/organizations/select', 'organizations.select')->name('organizations.select');
@@ -42,6 +55,13 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'org', 'read.only'])->group(function () {
+    Route::get('settings/profile', [OrganizationSettingsController::class, 'profile'])->name('settings.profile');
+    Route::post('settings/profile', [OrganizationSettingsController::class, 'updateProfile'])->name('settings.profile.update');
+    Route::get('settings/billing', [OrganizationSettingsController::class, 'billing'])->name('settings.billing');
+    Route::post('settings/billing', [OrganizationSettingsController::class, 'updateBilling'])->name('settings.billing.update');
+    Route::get('settings/branding', [OrganizationSettingsController::class, 'branding'])->name('settings.branding');
+    Route::post('settings/branding', [OrganizationSettingsController::class, 'updateBranding'])->name('settings.branding.update');
+
     Route::get('invoices/export', [ExportController::class, 'invoices'])->name('invoices.export');
     Route::get('payments/export', [ExportController::class, 'payments'])->name('payments.export');
     Route::resource('clients', ClientController::class);
@@ -69,6 +89,7 @@ Route::prefix('api')->group(function () {
         Route::apiResource('projects', ProjectApiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::apiResource('invoices', InvoiceApiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::post('invoices/{invoice}/payments', [PaymentApiController::class, 'store']);
+        Route::post('invoices/{invoice}/payments/{payment}/refund', [PaymentApiController::class, 'refund']);
         Route::get('audit', [AuditApiController::class, 'index']);
     });
 

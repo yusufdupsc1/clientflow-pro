@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Invoice;
+use App\Services\InvoicePdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -13,23 +14,26 @@ class InvoiceSentMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public Invoice $invoice;
-    public string $pdfContent;
 
-    public function __construct(Invoice $invoice, string $pdfContent)
+    public function __construct(Invoice $invoice)
     {
         $this->invoice = $invoice;
-        $this->pdfContent = $pdfContent;
     }
 
     public function build(): self
     {
-        return $this->subject('Invoice '.$this->invoice->invoice_number)
+        $invoice = $this->invoice->fresh(['items', 'client', 'project', 'organization']);
+        $pdfContent = app(InvoicePdfService::class)->render($invoice);
+
+        $fileName = 'invoice-'.($invoice->invoice_number ?? $invoice->id).'.pdf';
+
+        return $this->subject('Invoice '.($invoice->invoice_number ?? $invoice->id))
             ->view('emails.invoice-sent', [
-                'invoice' => $this->invoice,
+                'invoice' => $invoice,
             ])
             ->attachData(
-                $this->pdfContent,
-                'invoice-'.$this->invoice->invoice_number.'.pdf',
+                $pdfContent,
+                $fileName,
                 ['mime' => 'application/pdf']
             );
     }

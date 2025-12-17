@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 use App\Support\Activity\ActivityLogger;
 use App\Support\Tenancy\Tenant;
+use Illuminate\Support\Str;
 
 class CreateInvoice
 {
@@ -16,6 +17,10 @@ class CreateInvoice
             unset($data['items']);
 
             $invoiceNumber = $this->nextInvoiceNumber();
+            $organization = auth()->user()?->currentOrganization;
+            $currency = strtoupper($data['currency'] ?? $organization?->default_currency ?? config('stripe.default_currency', 'USD'));
+            $discount = max(0, (int) ($data['discount_cents'] ?? 0));
+            $taxRate = (float) ($data['tax_rate_percent'] ?? 0);
 
             $invoice = Invoice::create([
                 'client_id' => $data['client_id'] ?? null,
@@ -24,8 +29,13 @@ class CreateInvoice
                 'notes' => $data['notes'] ?? null,
                 'due_date' => $data['due_date'] ?? null,
                 'invoice_number' => $invoiceNumber,
+                'public_hash' => Str::uuid()->toString(),
                 'subtotal_cents' => 0,
+                'discount_cents' => $discount,
+                'tax_cents' => 0,
+                'tax_rate_percent' => $taxRate,
                 'total_cents' => 0,
+                'currency' => $currency,
             ]);
 
             $preparedItems = [];
@@ -47,9 +57,15 @@ class CreateInvoice
                 $invoice->items()->createMany($preparedItems);
             }
 
+            $taxable = max($subtotal - $discount, 0);
+            $taxCents = (int) round($taxable * ($taxRate / 100));
+            $total = max(0, $taxable + $taxCents);
+
             $invoice->forceFill([
                 'subtotal_cents' => $subtotal,
-                'total_cents' => $subtotal,
+                'discount_cents' => $discount,
+                'tax_cents' => $taxCents,
+                'total_cents' => $total,
             ])->save();
 
             ActivityLogger::log($invoice, 'invoices.created');

@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'stripe' => [
+        'mode' => config('stripe.mode', 'test'),
+        'secret' => config('stripe.secret_keys')[config('stripe.mode', 'test')] ?? null,
+        'publishable' => config('stripe.publishable_keys')[config('stripe.mode', 'test')] ?? null,
+        'webhook' => [
+            'secret' => config('stripe.webhook.secrets')[config('stripe.mode', 'test')] ?? null,
+            'tolerance' => config('stripe.webhook.tolerance'),
+        ],
+    ],
+
 ];

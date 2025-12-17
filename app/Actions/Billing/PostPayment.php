@@ -28,7 +28,7 @@ class PostPayment
                 ]);
             }
 
-            if ($invoice->status !== 'sent') {
+            if (! in_array($invoice->status, ['sent', 'overdue'], true)) {
                 throw ValidationException::withMessages([
                     'invoice' => ['Invoice must be sent before payment.'],
                 ]);
@@ -56,6 +56,7 @@ class PostPayment
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'amount_cents' => $amount,
+                'currency' => $invoice->currency ?? 'USD',
                 'paid_at' => now(),
                 'organization_id' => $invoice->organization_id,
                 'method' => $method,
