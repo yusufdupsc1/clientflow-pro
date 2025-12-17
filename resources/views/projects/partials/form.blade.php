@@ -8,7 +8,7 @@
 
 <div>
     <x-input-label for="client_id" :value="__('Client')" />
-    <select id="client_id" name="client_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+    <select id="client_id" name="client_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 shadow-sm">
         <option value="">{{ __('None') }}</option>
         @foreach ($clients as $client)
             <option value="{{ $client->id }}" @selected(old('client_id', $project?->client_id) == $client->id)>
@@ -21,7 +21,7 @@
 
 <div>
     <x-input-label for="status" :value="__('Status')" />
-    <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+    <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 shadow-sm" required>
         @foreach (['draft', 'active', 'completed'] as $status)
             <option value="{{ $status }}" @selected(old('status', $project?->status ?? 'draft') === $status)>
                 {{ ucfirst($status) }}
@@ -39,6 +39,6 @@
 
 <div>
     <x-input-label for="description" :value="__('Description')" />
-    <textarea id="description" name="description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old('description', $project?->description) }}</textarea>
+    <textarea id="description" name="description" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600">{{ old('description', $project?->description) }}</textarea>
     <x-input-error :messages="$errors->get('description')" class="mt-2" />
 </div>

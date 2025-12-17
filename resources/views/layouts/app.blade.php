@@ -34,14 +34,14 @@
                         x-data="{ show: true }"
                         x-show="show"
                         x-transition
-                        class="fixed top-4 right-4 z-50 rounded-lg bg-white shadow-lg border border-gray-200 px-4 py-3 text-sm text-gray-800"
+                        class="fixed top-4 right-4 z-50 rounded-lg bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-800 dark:text-gray-100"
                     >
                         <div class="flex items-start gap-2">
                             <div class="h-2 w-2 mt-1 rounded-full bg-emerald-500"></div>
                             <div class="flex-1">
                                 {{ session('status') }}
                             </div>
-                            <button type="button" class="text-gray-400 hover:text-gray-600" @click="show = false">&times;</button>
+                            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" @click="show = false">&times;</button>
                         </div>
                     </div>
                 @endif

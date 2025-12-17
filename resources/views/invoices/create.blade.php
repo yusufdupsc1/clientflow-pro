@@ -1,14 +1,14 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
             {{ __('New Invoice') }}
         </h2>
     </x-slot>
 
     <div class="py-6">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
                     <form method="POST" action="{{ route('invoices.store') }}" class="space-y-4">
                         @csrf
 
@@ -46,7 +46,7 @@
 
                         <div>
                             <x-input-label for="notes" :value="__('Notes')" />
-                            <textarea id="notes" name="notes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old('notes') }}</textarea>
+                            <textarea id="notes" name="notes" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600">{{ old('notes') }}</textarea>
                             <x-input-error :messages="$errors->get('notes')" class="mt-2" />
                         </div>
 
@@ -77,7 +77,7 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold">{{ __('Items') }}</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Items') }}</h3>
                             @include('invoices.partials.items', ['invoice' => null])
                             <x-input-error :messages="$errors->get('items')" class="mt-2" />
                         </div>

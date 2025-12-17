@@ -9,7 +9,7 @@
 @endphp
 
 @foreach ($items as $index => $item)
-    <div class="border rounded-md p-4 space-y-3 mb-3">
+    <div class="border border-gray-200 dark:border-gray-700 rounded-md p-4 space-y-3 mb-3 bg-white/50 dark:bg-gray-900/40">
         <div>
             <x-input-label for="items_{{ $index }}_description" :value="__('Description')" />
             <x-text-input id="items_{{ $index }}_description" name="items[{{ $index }}][description]" type="text" class="mt-1 block w-full" :value="old('items.' . $index . '.description', $item['description'])" required />
