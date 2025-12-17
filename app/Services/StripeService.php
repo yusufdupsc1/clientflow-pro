@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Organization;
+use App\Support\Billing\Currency;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -149,7 +150,10 @@ class StripeService
 
         if ($chargeAmountCents > 0 && $this->priceNeedsRefresh($invoice, $chargeAmountCents)) {
             $price = $this->client()->prices->create([
-                'currency' => strtolower($invoice->currency ?: config('stripe.default_currency', 'usd')),
+                'currency' => Currency::normalizeForStripe(
+                    $invoice->currency,
+                    config('stripe.default_currency', 'usd')
+                ),
                 'unit_amount' => (int) $chargeAmountCents,
                 'product' => $invoice->stripe_product_id,
                 'metadata' => [
@@ -299,9 +303,8 @@ class StripeService
             $invoice->public_hash = (string) Str::uuid();
         }
 
-        if (! $invoice->currency) {
-            $invoice->currency = strtoupper($this->organization?->default_currency ?? config('stripe.default_currency', 'usd'));
-        }
+        $defaultCurrency = strtoupper($this->organization?->default_currency ?? config('stripe.default_currency', 'usd'));
+        $invoice->currency = Currency::normalize($invoice->currency, $defaultCurrency);
 
         $invoice->stripe_mode = $this->mode;
         $invoice->save();

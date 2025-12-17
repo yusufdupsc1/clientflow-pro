@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use App\Support\Billing\Currency;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,14 +34,17 @@ class OrganizationSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'billing_email' => ['nullable', 'email'],
             'tax_id' => ['nullable', 'string', 'max:255'],
-            'default_currency' => ['nullable', 'string', 'size:3'],
+            'default_currency' => ['nullable', 'string', 'size:3', 'alpha:ascii'],
         ]);
 
         $organization->fill([
             'name' => $data['name'],
             'billing_email' => $data['billing_email'] ?? null,
             'tax_id' => $data['tax_id'] ?? null,
-            'default_currency' => strtoupper($data['default_currency'] ?? $organization->default_currency ?? config('stripe.default_currency', 'USD')),
+            'default_currency' => Currency::normalize(
+                $data['default_currency'] ?? $organization->default_currency,
+                strtoupper(config('stripe.default_currency', 'USD'))
+            ),
         ])->save();
 
         return back()->with('status', __('Organization profile updated.'));

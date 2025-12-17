@@ -3,6 +3,7 @@
 namespace App\Actions\Billing;
 
 use App\Models\Invoice;
+use App\Support\Billing\Currency;
 use Illuminate\Support\Facades\DB;
 use App\Support\Activity\ActivityLogger;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +22,10 @@ class UpdateInvoice
             unset($data['status']);
 
             $orgCurrency = auth()->user()?->currentOrganization?->default_currency;
-            $currency = strtoupper($data['currency'] ?? $invoice->currency ?? $orgCurrency ?? config('stripe.default_currency', 'USD'));
+            $currency = Currency::normalize(
+                $data['currency'] ?? $invoice->currency ?? $orgCurrency,
+                strtoupper(config('stripe.default_currency', 'USD'))
+            );
             $discount = max(0, (int) ($data['discount_cents'] ?? $invoice->discount_cents ?? 0));
             $taxRate = (float) ($data['tax_rate_percent'] ?? $invoice->tax_rate_percent ?? 0);
 

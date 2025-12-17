@@ -1,100 +1,133 @@
-# Clientflow Pro (Laravel 12, Multi-tenant SaaS)
+# Clientflow Pro
 
-## What this is
-- Multi-tenant CRM/projects/invoicing/payments with strict org isolation.
-- Breeze auth, Sanctum API, roles/permissions per org, audit logs, exports, webhooks.
-- Minimal Blade UI (org switcher, dashboard metrics, CRUD) + API docs/SDK stubs.
+Multi-tenant CRM for clients/projects/invoices with Stripe test/live payments.
 
-## Prereqs
-- PHP 8.4 with: pdo_sqlite, sqlite3, mbstring, xml, curl, zip, intl
+## Highlights
+- Strict organization (tenant) isolation via global model scopes + request middleware.
+- Roles/permissions per organization (Owner/Admin/Member).
+- Invoicing workflow: draft → sent/overdue → paid/void, PDF generation (dompdf), taxes/discounts.
+- Stripe Checkout + webhooks (`POST /stripe/webhook`) + public invoice pay pages (`/pay/{public_hash}`).
+- Audit logs + CSV exports + API (Sanctum) + API docs.
+
+## Requirements
+- PHP 8.4 (extensions: `pdo_sqlite`, `sqlite3`, `mbstring`, `xml`, `curl`, `zip`, `intl`)
 - Composer
-- Node via nvm (LTS; `.nvmrc` = `lts/*`)
-- SQLite (default) or your DB
-- Optional Mailpit (Docker) for local email
+- Node (LTS recommended; see `.nvmrc`)
+- SQLite (default) or another supported DB
 
-## Install & run (fresh clone)
+## Local setup (fresh clone)
 ```bash
-git clone <repo> clientflow-pro
+git clone https://github.com/yusufdupsc1/clientflow-pro.git
 cd clientflow-pro
+
 cp .env.example .env
-touch database/database.sqlite           # if using SQLite
+touch database/database.sqlite
 
 composer install
 npm ci
 npm run build
 
 php artisan key:generate
-php artisan config:clear && php artisan cache:clear
 php artisan migrate
-# optional sample data
-php artisan app:demo-seed
 
-# start services
-npm run dev          # Vite
-php artisan serve
+# optional demo data (creates org + invoices)
+php artisan app:demo-seed
 ```
-Open http://127.0.0.1:8000, register, verify email, pick/switch org from the nav dropdown, and use Clients/Projects/Invoices/Audit/Tokens.
+
+Run the app:
+```bash
+php artisan serve
+php artisan queue:work
+# optional scheduler
+php artisan schedule:work
+```
+
+Open `http://localhost:8000`.
+
+Important: use a single host consistently (`localhost` or `127.0.0.1`) to avoid session/cookie issues with tenant selection.
+
+## Demo users (after `app:demo-seed`)
+- `acme-studio.owner@example.com` / `password`
+- `acme-studio.admin@example.com` / `password`
+- `acme-studio.member@example.com` / `password`
+
+## Stripe (localhost testing)
+
+### 1) Get Stripe test keys
+Stripe Dashboard (Test mode) → Developers → API keys:
+- `STRIPE_TEST_PUBLISHABLE_KEY=pk_test_...`
+- `STRIPE_TEST_SECRET=sk_test_...`
+
+You can configure keys:
+- Globally via `.env`, or
+- Per organization in the UI: Settings → Billing & Stripe
+
+Organization keys take precedence when set.
+
+### 2) Start webhook forwarding (Stripe CLI)
+```bash
+stripe login
+stripe listen --forward-to http://localhost:8000/stripe/webhook
+```
+Copy the signing secret printed by Stripe CLI:
+- `STRIPE_TEST_WEBHOOK_SECRET=whsec_...`
+
+### 3) Configure env vars
+In `.env`:
+```env
+STRIPE_MODE=test
+STRIPE_TEST_SECRET=sk_test_...
+STRIPE_TEST_PUBLISHABLE_KEY=pk_test_...
+STRIPE_TEST_WEBHOOK_SECRET=whsec_...
+```
+Then:
+```bash
+php artisan config:clear
+```
+
+### 4) Create an invoice and pay
+1. Create an invoice (or use seeded ones).
+2. Open the invoice → copy the **Public payment link**.
+3. Visit `/pay/{public_hash}` and click **Pay with card**.
+4. Use Stripe test card: `4242 4242 4242 4242` (any future expiry, any CVC).
+
+### Currency safety
+Stripe requires a valid ISO 4217 currency code (e.g. `USD`).
+If you created invoices earlier with invalid currency values, normalize them:
+```bash
+php artisan app:repair-currencies
+```
+Dry run:
+```bash
+php artisan app:repair-currencies --dry-run
+```
+
+## Local email (optional: Mailpit)
+```bash
+docker compose up -d
+```
+- SMTP: `127.0.0.1:1025`
+- UI: `http://localhost:8025`
+- Smoke test: `php artisan mail:test you@example.com`
 
 ## API auth & docs
-- Tokens: `POST /api/tokens` (auth required) → `{"token": "...", "token_id": ...}`
-- Use header `Authorization: Bearer <token>`
-- Docs: `GET /api/docs` (markdown). SDK stubs: `sdk/php/ClientflowApi.php`, `sdk/js/clientflowApi.js`
-- Example: `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/clients`
+- Tokens: `POST /api/tokens` (auth required) → `{"token":"...","token_id":...}`
+- Use: `Authorization: Bearer <token>`
+- Docs: `GET /api/docs`
 
-## Roles & permissions (per org)
-- Owner: full
-- Admin: manage clients/projects/invoices/payments/invites/roles
-- Member: read-only (view only)
-Policies enforce org membership + role abilities.
-
-## Features (web)
-- Dashboard: counts (clients/projects/invoices), receivables/overdue, recent invoices.
-- Org switcher (desktop/mobile), org selection guard.
-- Clients/Projects/Invoices CRUD; send/void/overdue invoices; post/refund payments; PDF.
-- Audit log (owner/admin), CSV exports (invoices/payments) with filters.
-- Tokens UI; Invitations; Webhooks dispatch on invoice sent/voided, payment created.
-- Stripe checkout/payment links with webhook logging (`/stripe/webhook`), public pay pages (`/pay/{public_hash}`), per-org Stripe keys (Settings → Billing).
-- Invoice branding (logo/color), taxes/discounts/currency, rich PDF template (dompdf).
-
-## Local email (Mailpit)
-- `docker compose up -d` (SMTP 1025, UI 8025)
-- .env (already set): MAIL_MAILER=smtp, MAIL_HOST=127.0.0.1, MAIL_PORT=1025, MAIL_ENCRYPTION=null, MAIL_USERNAME/PASSWORD=null, MAIL_FROM_ADDRESS=no-reply@local.test
-- Clear config/cache after changes: `php artisan config:clear && php artisan cache:clear`
-- View: http://127.0.0.1:8025
-- Queue locally: set `QUEUE_CONNECTION=sync` or run `php artisan queue:work`
-- Smoke: `php artisan mail:test you@example.com`
-
-## API endpoints (high-level)
-- Clients/Projects/Invoices (with items)/Payments: CRUD via `/api/...` (auth:sanctum + org, paginated, filters on index)
-- Audit JSON: `GET /api/audit` (owner/admin) with `subject_type`, `action` filters
-- Exports: `GET /invoices/export`, `GET /payments/export` (CSV, tenant-scoped, filters)
-- Webhooks: events `invoices.sent`, `invoices.voided`, `payments.created`
-
-## Stripe setup
-- Env: set `STRIPE_MODE` (`test`/`live`), `STRIPE_TEST_SECRET/PUBLISHABLE_KEY/WEBHOOK_SECRET` (and live equivalents), `STRIPE_WEBHOOK_TOLERANCE` if you need a custom signature window.
-- Webhook endpoint: `POST /stripe/webhook` (no auth, CSRF disabled). Provide the matching secret. Payload metadata carries `invoice_id` + `organization_id`; events are logged in `stripe_webhook_events`.
-- Org-level keys: Settings → Billing lets each org store test/live keys + mode. Live mode is blocked on non-prod for safety.
-- Public checkout: send `/pay/{public_hash}` to customers. Buttons create Stripe Checkout sessions; webhooks mark payments/refunds and log them.
-
-## Health & ops
-- Health: `GET /health` → `{"status":"ok"}`
-- Read-only toggle: `APP_READ_ONLY=true` blocks writes (503)
-- Route cache: **disabled** due to name collisions (web/api). Do not `route:cache` until API routes are namespaced.
-
-## Deployment checklist
-- Env: `APP_ENV=production`, `APP_DEBUG=false`, real DB, `APP_KEY` set.
-- Queue: choose driver (db/redis); run `php artisan queue:work`.
-- Cache warmup (after fixing route names): `php artisan config:cache && php artisan route:cache && php artisan view:cache`.
-- Storage: `php artisan storage:link`; ensure web user can write `storage/` and `bootstrap/cache/`.
-- Schedule: `invoices:mark-overdue` (marks past-due as overdue) and `invoices:send-overdue-reminders` are scheduled daily via `bootstrap/app.php`.
-- Mail: configure real SMTP (Mailpit is local-only).
-- SSL: terminate TLS at proxy/web server.
+## Operations / production checklist
+- Set `APP_ENV=production`, `APP_DEBUG=false`, and a real DB.
+- Configure queues (`QUEUE_CONNECTION=database|redis`) and run workers.
+- Configure scheduler (cron calling `php artisan schedule:run`) or keep `schedule:work` running.
+- Ensure `storage/` and `bootstrap/cache/` are writable; run `php artisan storage:link`.
+- Configure Stripe **live** keys and webhook secret (live mode is blocked outside production by default).
 
 ## Tests
-- `php artisan test` (103 passed locally)
+```bash
+php artisan test
+```
 
 ## Troubleshooting
-- Missing sqlite drivers: install `php-sqlite3` (Debian/Ubuntu) so `pdo_sqlite`/`sqlite3` appear in `php -m`.
-- Manifest missing: `npm ci && npm run build`.
-- APP_KEY missing: `php artisan key:generate` after `.env`.
-- Node drift: `nvm alias default 'lts/*'` and `.nvmrc` = `lts/*`.
+- `403 Tenant not resolved`: you are likely missing an organization selection (log in and pick an org), or you’re mixing `localhost` and `127.0.0.1`.
+- SQLite driver missing: install `php-sqlite3` so `pdo_sqlite`/`sqlite3` appear in `php -m`.
+- Vite manifest missing: run `npm ci && npm run build`.

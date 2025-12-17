@@ -3,6 +3,7 @@
 namespace App\Actions\Billing;
 
 use App\Models\Invoice;
+use App\Support\Billing\Currency;
 use Illuminate\Support\Facades\DB;
 use App\Support\Activity\ActivityLogger;
 use App\Support\Tenancy\Tenant;
@@ -18,7 +19,10 @@ class CreateInvoice
 
             $invoiceNumber = $this->nextInvoiceNumber();
             $organization = auth()->user()?->currentOrganization;
-            $currency = strtoupper($data['currency'] ?? $organization?->default_currency ?? config('stripe.default_currency', 'USD'));
+            $currency = Currency::normalize(
+                $data['currency'] ?? $organization?->default_currency,
+                strtoupper(config('stripe.default_currency', 'USD'))
+            );
             $discount = max(0, (int) ($data['discount_cents'] ?? 0));
             $taxRate = (float) ($data['tax_rate_percent'] ?? 0);
 

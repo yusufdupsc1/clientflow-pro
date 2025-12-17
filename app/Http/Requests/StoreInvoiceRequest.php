@@ -39,7 +39,7 @@ class StoreInvoiceRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
-            'currency' => ['nullable', 'string', 'size:3'],
+            'currency' => ['nullable', 'string', 'size:3', 'alpha:ascii'],
             'tax_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'discount_cents' => ['nullable', 'integer', 'min:0'],
             'items' => ['required', 'array', 'min:1'],

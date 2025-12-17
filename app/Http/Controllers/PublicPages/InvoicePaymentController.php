@@ -5,6 +5,7 @@ namespace App\Http\Controllers\PublicPages;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Services\StripeService;
+use App\Support\Billing\Currency;
 use App\Support\Tenancy\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,11 @@ class InvoicePaymentController extends Controller
         $logoUrl = $organization?->branding_logo_path
             ? Storage::disk('public')->url($organization->branding_logo_path)
             : null;
+
+        $invoice->currency = Currency::normalize(
+            $invoice->currency,
+            $organization?->default_currency ?? strtoupper(config('stripe.default_currency', 'USD'))
+        );
 
         $remainingCents = max(0, (int) $invoice->total_cents - (int) $invoice->amount_paid_cents);
 
