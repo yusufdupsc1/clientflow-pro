@@ -26,7 +26,7 @@ class InvitationController extends Controller
         $user = $request->user();
         $organization = $user->currentOrganization;
 
-        if (! $organization) {
+        if (!$organization) {
             abort(403);
         }
 
@@ -70,7 +70,7 @@ class InvitationController extends Controller
 
         $existingUser = User::where('email', $invitation->email)->first();
 
-        if (! $existingUser) {
+        if (!$existingUser) {
             $payload = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'password' => ['required', 'confirmed', 'min:8'],
@@ -110,18 +110,33 @@ class InvitationController extends Controller
             'role' => ['required', 'in:owner,admin,member'],
         ]);
 
-        if (! $organization->users()->whereKey($user->id)->exists()) {
+        if (!$organization->users()->whereKey($user->id)->exists()) {
             abort(403);
         }
 
-        $organization->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
-        Permissions::syncUserRole($user, $organization->id, $data['role']);
+        // Get old role before updating
+        $oldRole = $organization->users()->whereKey($user->id)->first()->pivot->role;
+        $newRole = $data['role'];
 
+<<<<<<< HEAD
         if ($user->email) {
             Mail::to($user->email)->queue(new RoleChangedMail($organization, $data['role']));
         }
 
         return redirect()->back();
+=======
+        // Only update and notify if role actually changed
+        if ($oldRole !== $newRole) {
+            $organization->users()->updateExistingPivot($user->id, ['role' => $newRole]);
+            \App\Support\Permissions::syncUserRole($user, $organization->id, $newRole);
+
+            // Send role change notification
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->queue(new \App\Mail\RoleChangedMail($user, $organization, $oldRole, $newRole));
+        }
+
+        return redirect()->back()->with('success', 'Role updated successfully.');
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     }
 
 }

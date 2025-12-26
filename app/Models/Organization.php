@@ -16,6 +16,7 @@ class Organization extends Model
         'billing_email',
         'tax_id',
         'default_currency',
+<<<<<<< HEAD
         'stripe_mode',
         'stripe_live_secret',
         'stripe_live_publishable_key',
@@ -25,6 +26,20 @@ class Organization extends Model
         'stripe_test_webhook_secret',
         'branding_logo_path',
         'branding_color',
+=======
+        'default_tax_rate',
+        'logo_path',
+        'invoice_footer',
+        'payment_terms',
+        'address_line1',
+        'address_line2',
+        'city',
+        'state',
+        'postal_code',
+        'country',
+        'phone',
+        'website',
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     ];
 
     public function owner(): BelongsTo

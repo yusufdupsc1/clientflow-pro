@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+<<<<<<< HEAD
 use App\Models\Organization;
 use App\Support\Billing\Currency;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -10,21 +11,54 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+=======
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use App\Models\Organization;
+use App\Support\Tenancy\Tenant;
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 
 class OrganizationSettingsController extends Controller
 {
     use AuthorizesRequests;
 
+<<<<<<< HEAD
     public function profile(Request $request): View
     {
         $organization = $this->resolveOrganization($request);
         $this->authorize('manageSettings', $organization);
+=======
+    /**
+     * Show the organization settings page.
+     */
+    public function index(): View
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+
+        return view('organizations.settings.index', [
+            'organization' => $organization,
+        ]);
+    }
+
+    /**
+     * Show the profile settings.
+     */
+    public function profile(): View
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 
         return view('organizations.settings.profile', [
             'organization' => $organization,
         ]);
     }
 
+<<<<<<< HEAD
     public function updateProfile(Request $request): RedirectResponse
     {
         $organization = $this->resolveOrganization($request);
@@ -54,12 +88,48 @@ class OrganizationSettingsController extends Controller
     {
         $organization = $this->resolveOrganization($request);
         $this->authorize('manageSettings', $organization);
+=======
+    /**
+     * Update the organization profile.
+     */
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'billing_email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'address_line1' => ['nullable', 'string', 'max:255'],
+            'address_line2' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'postal_code' => ['nullable', 'string', 'max:50'],
+            'country' => ['nullable', 'string', 'max:2'],
+        ]);
+
+        $organization->update($validated);
+
+        return back()->with('success', 'Organization profile updated successfully.');
+    }
+
+    /**
+     * Show the billing settings.
+     */
+    public function billing(): View
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 
         return view('organizations.settings.billing', [
             'organization' => $organization,
         ]);
     }
 
+<<<<<<< HEAD
     public function updateBilling(Request $request): RedirectResponse
     {
         $organization = $this->resolveOrganization($request);
@@ -90,12 +160,42 @@ class OrganizationSettingsController extends Controller
     {
         $organization = $this->resolveOrganization($request);
         $this->authorize('manageSettings', $organization);
+=======
+    /**
+     * Update the billing settings.
+     */
+    public function updateBilling(Request $request): RedirectResponse
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+
+        $validated = $request->validate([
+            'tax_id' => ['nullable', 'string', 'max:100'],
+            'default_currency' => ['required', 'string', 'size:3'],
+            'default_tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'payment_terms' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $organization->update($validated);
+
+        return back()->with('success', 'Billing settings updated successfully.');
+    }
+
+    /**
+     * Show the branding settings.
+     */
+    public function branding(): View
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 
         return view('organizations.settings.branding', [
             'organization' => $organization,
         ]);
     }
 
+<<<<<<< HEAD
     public function updateBranding(Request $request): RedirectResponse
     {
         $organization = $this->resolveOrganization($request);
@@ -125,5 +225,51 @@ class OrganizationSettingsController extends Controller
         return $request->attributes->get('organization')
             ?? auth()->user()?->currentOrganization
             ?? abort(403, 'Organization not selected.');
+=======
+    /**
+     * Update the branding settings.
+     */
+    public function updateBranding(Request $request): RedirectResponse
+    {
+        $organization = $this->getCurrentOrganization();
+        $this->authorize('update', $organization);
+
+        $validated = $request->validate([
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,gif,svg', 'max:2048'],
+            'invoice_footer' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($request->hasFile('logo')) {
+            // Delete old logo if exists
+            if ($organization->logo_path) {
+                Storage::delete($organization->logo_path);
+            }
+
+            $path = $request->file('logo')->store('logos', 'public');
+            $organization->logo_path = $path;
+        }
+
+        if ($request->has('remove_logo') && $request->boolean('remove_logo')) {
+            if ($organization->logo_path) {
+                Storage::delete($organization->logo_path);
+                $organization->logo_path = null;
+            }
+        }
+
+        $organization->invoice_footer = $validated['invoice_footer'] ?? $organization->invoice_footer;
+        $organization->save();
+
+        return back()->with('success', 'Branding settings updated successfully.');
+    }
+
+    /**
+     * Get the current organization.
+     */
+    protected function getCurrentOrganization(): Organization
+    {
+        $orgId = Tenant::id() ?? auth()->user()->current_organization_id;
+
+        return Organization::findOrFail($orgId);
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     }
 }

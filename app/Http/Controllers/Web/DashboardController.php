@@ -8,8 +8,14 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Support\Tenancy\Tenant;
+<<<<<<< HEAD
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+=======
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -22,15 +28,38 @@ class DashboardController extends Controller
         $projects = Project::count();
         $invoices = Invoice::count();
 
-        $receivable = Invoice::whereIn('status', ['draft', 'sent'])
+        $receivable = Invoice::whereIn('status', ['draft', 'sent', 'overdue'])
             ->selectRaw('SUM(total_cents - amount_paid_cents) as balance')
             ->value('balance') ?? 0;
 
-        $overdue = Invoice::where('status', 'sent')
+        $overdue = Invoice::whereIn('status', ['sent', 'overdue'])
             ->whereNull('paid_at')
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', now())
             ->count();
+
+        // Collection Rate: paid invoices / total sent invoices (last 90 days)
+        $sentLast90Days = Invoice::whereIn('status', ['sent', 'paid', 'overdue'])
+            ->where('sent_at', '>=', now()->subDays(90))
+            ->count();
+
+        $paidLast90Days = Invoice::where('status', 'paid')
+            ->where('sent_at', '>=', now()->subDays(90))
+            ->count();
+
+        $collectionRate = $sentLast90Days > 0
+            ? round(($paidLast90Days / $sentLast90Days) * 100, 1)
+            : 0;
+
+        // MRR (Monthly Recurring Revenue) - based on paid invoices in last 30 days
+        $mrrCents = Payment::where('paid_at', '>=', now()->subDays(30))
+            ->sum('amount_cents');
+
+        // ARR (Annual Recurring Revenue) - MRR * 12
+        $arrCents = $mrrCents * 12;
+
+        // Health Indicator
+        $health = $this->getHealthStatus();
 
         $recentInvoices = Invoice::with('client')
             ->orderByDesc('created_at')
@@ -58,6 +87,7 @@ class DashboardController extends Controller
                 'invoices' => $invoices,
                 'receivable_cents' => (int) $receivable,
                 'overdue' => $overdue,
+<<<<<<< HEAD
                 'mrr_cents' => (int) $mrr,
                 'arr_cents' => (int) $arr,
                 'collection_rate' => $collectionRate,
@@ -67,8 +97,63 @@ class DashboardController extends Controller
                     'failed_jobs' => $failedJobs,
                     'stripe' => $stripeReady,
                 ],
+=======
+                'collection_rate' => $collectionRate,
+                'mrr_cents' => (int) $mrrCents,
+                'arr_cents' => (int) $arrCents,
+>>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
             ],
+            'health' => $health,
             'recentInvoices' => $recentInvoices,
         ]);
+    }
+
+    protected function getHealthStatus(): array
+    {
+        $status = [
+            'overall' => 'ok',
+            'database' => 'ok',
+            'queue' => 'ok',
+            'stripe' => 'ok',
+            'issues' => [],
+        ];
+
+        // Check database
+        try {
+            DB::connection()->getPdo();
+        } catch (\Exception $e) {
+            $status['database'] = 'error';
+            $status['issues'][] = 'Database connection failed';
+        }
+
+        // Check queue (by checking if jobs table exists and is accessible)
+        try {
+            $failedJobs = DB::table('failed_jobs')->count();
+            if ($failedJobs > 10) {
+                $status['queue'] = 'warning';
+                $status['issues'][] = "{$failedJobs} failed jobs in queue";
+            }
+        } catch (\Exception $e) {
+            // Queue might use different driver, that's ok
+        }
+
+        // Check Stripe configuration
+        $stripeKey = config('stripe.secret');
+        if (empty($stripeKey)) {
+            $status['stripe'] = 'warning';
+            $status['issues'][] = 'Stripe not configured';
+        } elseif (app()->environment('production') && str_starts_with($stripeKey, 'sk_test_')) {
+            $status['stripe'] = 'error';
+            $status['issues'][] = 'Test Stripe keys in production!';
+        }
+
+        // Determine overall status
+        if ($status['database'] === 'error' || $status['stripe'] === 'error') {
+            $status['overall'] = 'error';
+        } elseif ($status['queue'] === 'warning' || $status['stripe'] === 'warning') {
+            $status['overall'] = 'warning';
+        }
+
+        return $status;
     }
 }

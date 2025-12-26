@@ -71,12 +71,24 @@ Route::middleware(['auth', 'org', 'read.only'])->group(function () {
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void'])->name('invoices.void');
+    Route::post('payments/{payment}/refund', [\App\Http\Controllers\Web\PaymentController::class, 'refund'])->name('payments.refund');
 
     Route::get('invitations', [InvitationController::class, 'index'])->name('invitations.index');
     Route::post('organizations/{organization}/invites', [InvitationController::class, 'store'])->name('organizations.invites.store');
     Route::patch('organizations/{organization}/members/{user}', [InvitationController::class, 'updateMemberRole'])->name('organizations.members.update');
 
     Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+    // Organization Settings
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'profile'])->name('profile');
+        Route::get('/profile', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'profile'])->name('profile.show');
+        Route::patch('/profile', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/billing', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'billing'])->name('billing');
+        Route::patch('/billing', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'updateBilling'])->name('billing.update');
+        Route::get('/branding', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'branding'])->name('branding');
+        Route::patch('/branding', [\App\Http\Controllers\Web\OrganizationSettingsController::class, 'updateBranding'])->name('branding.update');
+    });
 });
 
 Route::post('invites/{token}', [InvitationController::class, 'accept'])->name('invites.accept');
@@ -109,4 +121,17 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/api/docs', ApiDocsController::class)->name('api.docs');
 
-require __DIR__.'/auth.php';
+// Stripe Webhook (no CSRF, no auth - verified by signature)
+Route::post('/stripe/webhook', \App\Http\Controllers\Webhook\StripeWebhookController::class)
+    ->name('stripe.webhook')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+// Public payment checkout routes (no auth required)
+Route::prefix('pay')->name('pay.')->group(function () {
+    Route::get('/{invoice}', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'show'])->name('show');
+    Route::post('/{invoice}', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'redirect'])->name('redirect');
+    Route::get('/{invoice}/success', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'success'])->name('success');
+    Route::get('/{invoice}/status', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'status'])->name('status');
+});
+
+require __DIR__ . '/auth.php';
