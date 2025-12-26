@@ -26,11 +26,11 @@ class Invoice extends Model
         'amount_paid_cents',
         'subtotal_cents',
         'discount_cents',
+        'discount_type',
         'tax_cents',
         'tax_rate_percent',
         'total_cents',
         'currency',
-<<<<<<< HEAD
         'stripe_product_id',
         'stripe_price_id',
         'stripe_price_amount_cents',
@@ -41,28 +41,16 @@ class Invoice extends Model
         'stripe_customer_id',
         'stripe_payment_intent_id',
         'stripe_mode',
-=======
-        'tax_rate',
-        'tax_cents',
-        'discount_cents',
-        'discount_type',
-        'stripe_checkout_session_id',
-        'stripe_payment_intent_id',
         'payment_link_url',
         'payment_link_expires_at',
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     ];
 
     protected $casts = [
         'due_date' => 'date',
         'sent_at' => 'datetime',
         'paid_at' => 'datetime',
-<<<<<<< HEAD
         'tax_rate_percent' => 'decimal:2',
-=======
         'payment_link_expires_at' => 'datetime',
-        'tax_rate' => 'decimal:2',
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     ];
 
     public function client(): BelongsTo

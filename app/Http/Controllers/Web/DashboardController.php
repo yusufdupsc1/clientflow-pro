@@ -8,14 +8,10 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Support\Tenancy\Tenant;
-<<<<<<< HEAD
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-=======
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -77,7 +73,7 @@ class DashboardController extends Controller
         $failedJobs = Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
         $stripeKeys = config('stripe.secret_keys', []);
         $stripeMode = config('stripe.mode', 'test');
-        $stripeReady = is_array($stripeKeys) && ! empty($stripeKeys[$stripeMode]);
+        $stripeReady = is_array($stripeKeys) && !empty($stripeKeys[$stripeMode]);
 
         return view('dashboard', [
             'tenantId' => $tenantId,
@@ -87,9 +83,8 @@ class DashboardController extends Controller
                 'invoices' => $invoices,
                 'receivable_cents' => (int) $receivable,
                 'overdue' => $overdue,
-<<<<<<< HEAD
-                'mrr_cents' => (int) $mrr,
-                'arr_cents' => (int) $arr,
+                'mrr_cents' => (int) $mrrCents,
+                'arr_cents' => (int) $arrCents,
                 'collection_rate' => $collectionRate,
                 'health' => [
                     'queue' => $queueBacklog < 10 && $failedJobs === 0,
@@ -97,11 +92,6 @@ class DashboardController extends Controller
                     'failed_jobs' => $failedJobs,
                     'stripe' => $stripeReady,
                 ],
-=======
-                'collection_rate' => $collectionRate,
-                'mrr_cents' => (int) $mrrCents,
-                'arr_cents' => (int) $arrCents,
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
             ],
             'health' => $health,
             'recentInvoices' => $recentInvoices,

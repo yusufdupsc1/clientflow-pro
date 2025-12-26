@@ -6,14 +6,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->string('public_hash')->nullable()->after('invoice_number');
             $table->integer('discount_cents')->default(0)->after('subtotal_cents');
-            $table->integer('tax_cents')->default(0)->after('discount_cents');
+            $table->string('discount_type')->nullable()->after('discount_cents');
+            $table->integer('tax_cents')->default(0)->after('discount_type');
             $table->decimal('tax_rate_percent', 5, 2)->default(0)->after('tax_cents');
             $table->string('currency', 3)->default('USD')->after('total_cents');
 
@@ -23,12 +23,16 @@ return new class extends Migration
             $table->string('stripe_price_currency', 3)->nullable()->after('stripe_price_amount_cents');
             $table->string('stripe_payment_link_id')->nullable()->after('stripe_price_id');
             $table->string('stripe_payment_link_url')->nullable()->after('stripe_payment_link_id');
-            $table->string('stripe_checkout_session_id')->nullable()->after('stripe_payment_link_url');
+            $table->string('payment_link_url')->nullable()->after('stripe_payment_link_url');
+            $table->timestamp('payment_link_expires_at')->nullable()->after('payment_link_url');
+            $table->string('stripe_checkout_session_id')->nullable()->after('payment_link_expires_at');
             $table->string('stripe_customer_id')->nullable()->after('stripe_checkout_session_id');
             $table->string('stripe_payment_intent_id')->nullable()->after('stripe_customer_id');
             $table->string('stripe_mode')->nullable()->after('stripe_payment_intent_id');
 
             $table->unique('public_hash');
+            $table->index('stripe_checkout_session_id');
+            $table->index('stripe_payment_intent_id');
         });
 
         DB::table('invoices')->whereNull('public_hash')->orderBy('id')->chunk(100, function ($invoices): void {
@@ -42,6 +46,7 @@ return new class extends Migration
         Schema::table('payments', function (Blueprint $table) {
             $table->string('currency', 3)->default('USD')->after('amount_cents');
             $table->integer('refunded_cents')->default(0)->after('currency');
+            $table->string('refund_reason')->nullable()->after('refunded_cents');
             $table->timestamp('refunded_at')->nullable()->after('paid_at');
             $table->string('stripe_payment_intent_id')->nullable()->after('external_id');
             $table->string('stripe_charge_id')->nullable()->after('stripe_payment_intent_id');
@@ -49,6 +54,8 @@ return new class extends Migration
             $table->string('stripe_balance_transaction_id')->nullable()->after('stripe_refund_id');
             $table->string('stripe_receipt_url')->nullable()->after('stripe_balance_transaction_id');
             $table->string('stripe_webhook_event_id')->nullable()->after('stripe_receipt_url');
+
+            $table->index('stripe_payment_intent_id');
         });
 
         Schema::create('stripe_webhook_events', function (Blueprint $table) {
@@ -72,9 +79,11 @@ return new class extends Migration
         Schema::dropIfExists('stripe_webhook_events');
 
         Schema::table('payments', function (Blueprint $table) {
+            $table->dropIndex(['stripe_payment_intent_id']);
             $table->dropColumn([
                 'currency',
                 'refunded_cents',
+                'refund_reason',
                 'refunded_at',
                 'stripe_payment_intent_id',
                 'stripe_charge_id',
@@ -87,9 +96,12 @@ return new class extends Migration
 
         Schema::table('invoices', function (Blueprint $table) {
             $table->dropUnique(['public_hash']);
+            $table->dropIndex(['stripe_checkout_session_id']);
+            $table->dropIndex(['stripe_payment_intent_id']);
             $table->dropColumn([
                 'public_hash',
                 'discount_cents',
+                'discount_type',
                 'tax_cents',
                 'tax_rate_percent',
                 'currency',
@@ -99,6 +111,8 @@ return new class extends Migration
                 'stripe_price_currency',
                 'stripe_payment_link_id',
                 'stripe_payment_link_url',
+                'payment_link_url',
+                'payment_link_expires_at',
                 'stripe_checkout_session_id',
                 'stripe_customer_id',
                 'stripe_payment_intent_id',

@@ -128,11 +128,7 @@ php artisan test
 ```
 
 ## Troubleshooting
-<<<<<<< HEAD
 - `403 Tenant not resolved`: you are likely missing an organization selection (log in and pick an org), or you’re mixing `localhost` and `127.0.0.1`.
-- SQLite driver missing: install `php-sqlite3` so `pdo_sqlite`/`sqlite3` appear in `php -m`.
-- Vite manifest missing: run `npm ci && npm run build`.
-=======
 - Missing sqlite drivers: install `php-sqlite3` (Debian/Ubuntu) so `pdo_sqlite`/`sqlite3` appear in `php -m`.
 - Manifest missing: `npm ci && npm run build`.
 - APP_KEY missing: `php artisan key:generate` after `.env`.
@@ -157,15 +153,15 @@ php artisan test
    - Go to https://dashboard.stripe.com/test/webhooks
    - Click "Add endpoint"
    - Endpoint URL: `https://your-domain.com/stripe/webhook`
-   - Select events: `checkout.session.completed`, `payment_intent.succeeded`
+   - Select events: `checkout.session.completed`, `payment_intent.succeeded`, `charge.refunded`
    - Copy the "Signing secret" (starts with `whsec_`)
 
 4. **Update .env**
    ```bash
-   STRIPE_KEY=pk_test_your_publishable_key
-   STRIPE_SECRET=sk_test_your_secret_key
-   STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-   STRIPE_TEST_MODE=true
+   STRIPE_MODE=test
+   STRIPE_TEST_SECRET=sk_test_...
+   STRIPE_TEST_PUBLISHABLE_KEY=pk_test_...
+   STRIPE_TEST_WEBHOOK_SECRET=whsec_...
    ```
 
 5. **Local Testing with Stripe CLI**
@@ -178,18 +174,17 @@ php artisan test
 
 ### Payment Flow
 1. Create and send invoice from dashboard
-2. Client receives email with "Pay Now" button → `/pay/{invoice_id}`
+2. Client receives email with "Pay Now" button → `/pay/{public_hash}`
 3. Client clicks "Pay with Card" → redirects to Stripe Checkout
 4. After payment → webhook triggers → invoice marked "paid"
-5. Receipt email sent automatically
 
 ### Going Live
 ```bash
 # In .env for production:
-STRIPE_KEY=pk_live_your_publishable_key
-STRIPE_SECRET=sk_live_your_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_live_webhook_secret
-STRIPE_TEST_MODE=false
+STRIPE_MODE=live
+STRIPE_LIVE_SECRET=sk_live_...
+STRIPE_LIVE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_LIVE_WEBHOOK_SECRET=whsec_live_...
 ```
 > ⚠️ **Never use live keys when `APP_ENV` != `production`**
 
@@ -199,7 +194,7 @@ STRIPE_TEST_MODE=false
 
 New settings available at `/settings`:
 - **Profile**: Org name, billing email, phone, address (appears on invoices)
-- **Billing**: Tax ID/VAT, default currency, default tax rate, payment terms
+- **Billing**: Tax ID/VAT, default currency, default tax rate, payment terms, Stripe keys
 - **Branding**: Logo upload (appears on PDF invoices), invoice footer
 
 ---
@@ -208,7 +203,7 @@ New settings available at `/settings`:
 
 | Feature | Route/Endpoint |
 |---------|----------------|
-| Payment Checkout | `GET /pay/{invoice}` (public) |
+| Payment Checkout | `GET /pay/{public_hash}` (public) |
 | Stripe Webhook | `POST /stripe/webhook` |
 | Org Settings | `GET /settings/*` |
 | PDF with branding | `GET /invoices/{id}/pdf` |
@@ -222,7 +217,6 @@ New settings available at `/settings`:
 # Environment
 APP_ENV=production
 APP_DEBUG=false
-STRIPE_TEST_MODE=false  # Only with live keys!
 
 # Required commands
 php artisan key:generate  # If not set
@@ -232,7 +226,7 @@ php artisan config:cache
 php artisan view:cache
 
 # Verify
-curl https://your-domain.com/health  # Should return {"status":"ok"}
+curl https://your-domain.com/health  # Should return {"commit":"...","time":"..."}
 
 # Queue worker (for emails, webhooks)
 php artisan queue:work --tries=3
@@ -246,4 +240,3 @@ grep -E "sk_test_|pk_test_" .env && echo "⚠️ TEST KEYS DETECTED" || echo "�
 # Verify APP_DEBUG is false
 grep "APP_DEBUG=true" .env && echo "⚠️ DEBUG IS ON" || echo "✓ Debug off"
 ```
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)

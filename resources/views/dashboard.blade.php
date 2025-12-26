@@ -167,11 +167,7 @@
                         <a href="{{ route('invoices.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">View all</a>
                     </div>
                     <div class="overflow-x-auto">
-<<<<<<< HEAD
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm text-left text-gray-700 dark:text-gray-200">
-=======
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
                             <thead>
                                 <tr>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invoice</th>
@@ -182,29 +178,9 @@
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 @forelse ($recentInvoices as $invoice)
-<<<<<<< HEAD
-                                    <tr>
-                                        <td class="px-4 py-2">
-                                            <a href="{{ route('invoices.show', $invoice) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">
-                                                #{{ $invoice->invoice_number ?? $invoice->id }} — {{ $invoice->title }}
-                                            </a>
-                                        </td>
-                                        <td class="px-4 py-2">{{ $invoice->client?->name ?? '—' }}</td>
-                                        <td class="px-4 py-2">
-                                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-200">
-                                                {{ ucfirst($invoice->status ?? 'draft') }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-2 text-right tabular-nums whitespace-nowrap">{{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->total_cents / 100, 2) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
-                                            {{ __('No invoices yet.') }}
-=======
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-4 py-3">
-                                            <a href="{{ route('invoices.show', $invoice) }}" class="text-indigo-600 hover:underline">
+                                            <a href="{{ route('invoices.show', $invoice) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">
                                                 #{{ $invoice->invoice_number ?? $invoice->id }} — {{ $invoice->title }}
                                             </a>
                                         </td>
@@ -223,7 +199,9 @@
                                                 {{ ucfirst($invoice->status ?? 'draft') }}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-right font-medium">${{ number_format($invoice->total_cents / 100, 2) }}</td>
+                                        <td class="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
+                                            {{ $invoice->currency ?? 'USD' }} {{ number_format($invoice->total_cents / 100, 2) }}
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -235,7 +213,6 @@
                                                 :action-url="route('invoices.create')"
                                                 action-text="Create Invoice"
                                             />
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
                                         </td>
                                     </tr>
                                 @endforelse

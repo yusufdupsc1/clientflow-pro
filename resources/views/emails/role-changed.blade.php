@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-<div>
-    <p>Hi there,</p>
-    <p>Your role for <strong>{{ $organization->name }}</strong> has been updated to <strong>{{ ucfirst($role) }}</strong>.</p>
-    <p>If you did not expect this change, please contact your administrator.</p>
-    <p>Thanks,<br>{{ config('app.name') }}</p>
-</div>
-=======
 <!DOCTYPE html>
 <html>
 
@@ -162,4 +154,3 @@
 </body>
 
 </html>
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)

@@ -137,10 +137,7 @@ class InvoiceController extends Controller
         }
 
         $after = $this->snapshot($invoice);
-<<<<<<< HEAD
-=======
-        $pdf = $this->generatePdf($invoice)->output();
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
+        $after = $this->snapshot($invoice);
         Mail::to($invoice->client?->email ?? auth()->user()->email)
             ->queue(new InvoiceSentMail($invoice));
 
@@ -169,7 +166,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        if (! in_array($invoice->status, ['sent', 'overdue'], true)) {
+        if (!in_array($invoice->status, ['sent', 'overdue'], true)) {
             abort(response()->json(['message' => 'Only sent invoices can be voided.'], 422));
         }
 
@@ -201,28 +198,13 @@ class InvoiceController extends Controller
 
         $pdf = app(InvoicePdfService::class)->render($invoice);
 
-        return response($pdf->output(), 200, [
+        return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="invoice-' . ($invoice->invoice_number ?? $invoice->id) . '.pdf"',
         ]);
     }
 
-<<<<<<< HEAD
-=======
-    protected function generatePdf(Invoice $invoice): \Barryvdh\DomPDF\Facade\Pdf|\Barryvdh\DomPDF\PDF
-    {
-        $invoice->loadMissing(['items', 'client', 'project', 'organization']);
 
-        return \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'items' => $invoice->items,
-            'client' => $invoice->client,
-            'project' => $invoice->project,
-            'organization' => $invoice->organization,
-        ])->setPaper('letter');
-    }
-
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     protected function snapshot(Invoice $invoice): array
     {
         return [

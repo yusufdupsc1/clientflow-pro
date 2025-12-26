@@ -1,53 +1,3 @@
-<<<<<<< HEAD
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Branding') }}
-        </h2>
-    </x-slot>
-
-    <div class="py-6">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100 space-y-4">
-                    @include('organizations.settings._nav')
-
-                    @if (session('status'))
-                        <div class="rounded-md bg-emerald-50 dark:bg-emerald-900/20 p-4 text-emerald-800 dark:text-emerald-200 text-sm">
-                            {{ session('status') }}
-                        </div>
-                    @endif
-
-                    <form method="POST" action="{{ route('settings.branding.update') }}" enctype="multipart/form-data" class="space-y-4">
-                        @csrf
-                        <div>
-                            <x-input-label for="branding_logo" :value="__('Logo for invoices')" />
-                            <input id="branding_logo" name="branding_logo" type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-700 dark:text-gray-200" />
-                            <x-input-error :messages="$errors->get('branding_logo')" class="mt-2" />
-                            @if ($organization->branding_logo_path)
-                                <div class="mt-3">
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ __('Current logo preview') }}</p>
-                                    <img src="{{ Storage::disk('public')->url($organization->branding_logo_path) }}" alt="{{ __('Current logo') }}" class="h-16">
-                                </div>
-                            @endif
-                        </div>
-
-                        <div>
-                            <x-input-label for="branding_color" :value="__('Brand color (hex or name)')" />
-                            <x-text-input id="branding_color" name="branding_color" type="text" class="mt-1 block w-full" :value="old('branding_color', $organization->branding_color)" />
-                            <x-input-error :messages="$errors->get('branding_color')" class="mt-2" />
-                        </div>
-
-                        <div class="flex justify-end">
-                            <x-primary-button>{{ __('Save branding') }}</x-primary-button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</x-app-layout>
-=======
 <x-settings-layout>
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -56,10 +6,16 @@
                 branding.</p>
         </div>
 
+        @if (session('status'))
+            <div
+                class="m-6 p-4 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200 text-sm">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <form action="{{ route('settings.branding.update') }}" method="POST" enctype="multipart/form-data"
             class="p-6 space-y-6">
             @csrf
-            @method('PATCH')
 
             <!-- Logo Upload -->
             <div>
@@ -67,9 +23,13 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">This logo will appear on your invoices and
                     emails.</p>
 
-                @if($organization->logo_path)
+                @php
+                    $currentLogo = $organization->branding_logo_path ?? $organization->logo_path;
+                @endphp
+
+                @if($currentLogo)
                     <div class="mb-4 flex items-center gap-4">
-                        <img src="{{ Storage::url($organization->logo_path) }}" alt="Current logo"
+                        <img src="{{ Storage::disk('public')->url($currentLogo) }}" alt="Current logo"
                             class="h-16 w-auto object-contain bg-gray-100 dark:bg-gray-700 rounded p-2">
                         <label class="flex items-center text-sm">
                             <input type="checkbox" name="remove_logo" value="1"
@@ -95,6 +55,29 @@
                         <input id="logo" name="logo" type="file" class="hidden" accept="image/*" />
                     </label>
                 </div>
+                <x-input-error :messages="$errors->get('logo')" class="mt-2" />
+                <x-input-error :messages="$errors->get('branding_logo')" class="mt-2" />
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+            <!-- Brand Color -->
+            <div>
+                <label for="branding_color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Brand
+                    Color</label>
+                <div class="mt-1 flex items-center gap-3">
+                    <input type="color" id="branding_color_picker"
+                        value="{{ old('branding_color', $organization->branding_color ?? '#4f46e5') }}"
+                        oninput="document.getElementById('branding_color').value = this.value"
+                        class="h-10 w-10 border-none bg-transparent cursor-pointer">
+                    <input type="text" name="branding_color" id="branding_color"
+                        value="{{ old('branding_color', $organization->branding_color ?? '#4f46e5') }}"
+                        oninput="document.getElementById('branding_color_picker').value = this.value"
+                        class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used for PDF accent colors and UI highlights.
+                </p>
+                <x-input-error :messages="$errors->get('branding_color')" class="mt-2" />
             </div>
 
             <hr class="border-gray-200 dark:border-gray-700">
@@ -108,15 +91,12 @@
                 <textarea name="invoice_footer" id="invoice_footer" rows="4"
                     placeholder="e.g., Thank you for your business! Payment is due within 30 days."
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('invoice_footer', $organization->invoice_footer) }}</textarea>
+                <x-input-error :messages="$errors->get('invoice_footer')" class="mt-2" />
             </div>
 
             <div class="flex justify-end">
-                <button type="submit"
-                    class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                    Save Changes
-                </button>
+                <x-primary-button>{{ __('Save branding') }}</x-primary-button>
             </div>
         </form>
     </div>
 </x-settings-layout>
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)

@@ -51,7 +51,7 @@ class InvitationApiController extends Controller
 
         $user = User::where('email', $invitation->email)->first();
 
-        if (! $user) {
+        if (!$user) {
             $payload = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'password' => ['required', 'confirmed', 'min:8'],
@@ -94,15 +94,22 @@ class InvitationApiController extends Controller
             'role' => ['required', 'in:owner,admin,member'],
         ]);
 
-        if (! $organization->users()->whereKey($user->id)->exists()) {
+        if (!$organization->users()->whereKey($user->id)->exists()) {
             abort(403);
         }
 
-        $organization->users()->updateExistingPivot($user->id, ['role' => $data['role']]);
-        Permissions::syncUserRole($user, $organization->id, $data['role']);
+        // Get old role before updating
+        $oldRole = $organization->users()->whereKey($user->id)->first()->pivot->role;
+        $newRole = $data['role'];
 
-        if ($user->email) {
-            Mail::to($user->email)->queue(new RoleChangedMail($organization, $data['role']));
+        // Only update and notify if role actually changed
+        if ($oldRole !== $newRole) {
+            $organization->users()->updateExistingPivot($user->id, ['role' => $newRole]);
+            Permissions::syncUserRole($user, $organization->id, $newRole);
+
+            if ($user->email) {
+                Mail::to($user->email)->queue(new RoleChangedMail($user, $organization, $oldRole, $newRole));
+            }
         }
 
         return response()->json([

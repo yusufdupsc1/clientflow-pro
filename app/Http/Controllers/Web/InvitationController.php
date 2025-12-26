@@ -118,25 +118,19 @@ class InvitationController extends Controller
         $oldRole = $organization->users()->whereKey($user->id)->first()->pivot->role;
         $newRole = $data['role'];
 
-<<<<<<< HEAD
-        if ($user->email) {
-            Mail::to($user->email)->queue(new RoleChangedMail($organization, $data['role']));
-        }
-
-        return redirect()->back();
-=======
         // Only update and notify if role actually changed
         if ($oldRole !== $newRole) {
             $organization->users()->updateExistingPivot($user->id, ['role' => $newRole]);
-            \App\Support\Permissions::syncUserRole($user, $organization->id, $newRole);
+            Permissions::syncUserRole($user, $organization->id, $newRole);
 
             // Send role change notification
-            \Illuminate\Support\Facades\Mail::to($user->email)
-                ->queue(new \App\Mail\RoleChangedMail($user, $organization, $oldRole, $newRole));
+            if ($user->email) {
+                Mail::to($user->email)
+                    ->queue(new RoleChangedMail($user, $organization, $oldRole, $newRole));
+            }
         }
 
         return redirect()->back()->with('success', 'Role updated successfully.');
->>>>>>> 6337e80 (feat: Implement comprehensive billing and payment functionality with Stripe integration, invoice management, refunds, and organization-specific settings.)
     }
 
 }
