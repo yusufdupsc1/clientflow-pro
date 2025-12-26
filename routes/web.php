@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\ApiDocsController;
 use App\Http\Controllers\Webhooks\StripeWebhookController;
 use App\Http\Controllers\PublicPages\InvoicePaymentController;
 use App\Http\Controllers\Web\OrganizationSettingsController;
+use App\Http\Controllers\Public\ClientPortalController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\DashboardController;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -36,12 +37,19 @@ Route::get('/dashboard', DashboardController::class)
 
 Route::post('/stripe/webhook', StripeWebhookController::class)
     ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('webhooks.stripe');
+    ->name('stripe.webhook');
 
-Route::prefix('pay')->group(function () {
-    Route::get('{public_hash}', [InvoicePaymentController::class, 'show'])->name('pay.invoices.show');
-    Route::post('{public_hash}/checkout', [InvoicePaymentController::class, 'checkout'])->name('pay.invoices.checkout');
+// Public Portal & Payment Routes
+Route::prefix('portal')->name('portal.')->group(function () {
+    Route::get('{public_hash}', [ClientPortalController::class, 'show'])->name('show');
+    Route::post('{public_hash}/checkout', [ClientPortalController::class, 'checkout'])->name('checkout');
+    Route::get('{public_hash}/download', [ClientPortalController::class, 'download'])->name('download');
 });
+
+// Backward compatibility for /pay links
+Route::get('pay/{public_hash}', function ($public_hash) {
+    return redirect()->route('portal.show', $public_hash);
+})->name('pay.invoices.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('/organizations/select', 'organizations.select')->name('organizations.select');
@@ -121,17 +129,6 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/api/docs', ApiDocsController::class)->name('api.docs');
 
-// Stripe Webhook (no CSRF, no auth - verified by signature)
-Route::post('/stripe/webhook', \App\Http\Controllers\Webhook\StripeWebhookController::class)
-    ->name('stripe.webhook')
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
-
-// Public payment checkout routes (no auth required)
-Route::prefix('pay')->name('pay.')->group(function () {
-    Route::get('/{invoice}', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'show'])->name('show');
-    Route::post('/{invoice}', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'redirect'])->name('redirect');
-    Route::get('/{invoice}/success', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'success'])->name('success');
-    Route::get('/{invoice}/status', [\App\Http\Controllers\Web\PaymentCheckoutController::class, 'status'])->name('status');
-});
+require __DIR__ . '/auth.php';
 
 require __DIR__ . '/auth.php';

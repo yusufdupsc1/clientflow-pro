@@ -20,9 +20,14 @@ class DashboardController extends Controller
     {
         $tenantId = Tenant::id();
 
+        // Primary Metrics
         $clients = Client::count();
         $projects = Project::count();
         $invoices = Invoice::count();
+
+        // Financial Metrics
+        $totalBilled = Invoice::sum('total_cents');
+        $totalCollected = Payment::sum('amount_cents');
 
         $receivable = Invoice::whereIn('status', ['draft', 'sent', 'overdue'])
             ->selectRaw('SUM(total_cents - amount_paid_cents) as balance')
@@ -34,21 +39,10 @@ class DashboardController extends Controller
             ->whereDate('due_date', '<', now())
             ->count();
 
-        // Collection Rate: paid invoices / total sent invoices (last 90 days)
-        $sentLast90Days = Invoice::whereIn('status', ['sent', 'paid', 'overdue'])
-            ->where('sent_at', '>=', now()->subDays(90))
-            ->count();
+        $collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100, 1) : 0;
 
-        $paidLast90Days = Invoice::where('status', 'paid')
-            ->where('sent_at', '>=', now()->subDays(90))
-            ->count();
-
-        $collectionRate = $sentLast90Days > 0
-            ? round(($paidLast90Days / $sentLast90Days) * 100, 1)
-            : 0;
-
-        // MRR (Monthly Recurring Revenue) - based on paid invoices in last 30 days
-        $mrrCents = Payment::where('paid_at', '>=', now()->subDays(30))
+        // MRR (Monthly Recurring Revenue) - based on paid payments in last 30 days
+        $mrrCents = (int) Payment::where('paid_at', '>=', now()->subDays(30))
             ->sum('amount_cents');
 
         // ARR (Annual Recurring Revenue) - MRR * 12
@@ -62,15 +56,6 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $mrr = Payment::where('created_at', '>=', now()->subMonth())->sum('amount_cents');
-        $arr = $mrr * 12;
-
-        $totalBilled = Invoice::sum('total_cents');
-        $totalCollected = Payment::sum('amount_cents');
-        $collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100, 1) : 0;
-
-        $queueBacklog = Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0;
-        $failedJobs = Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
         $stripeKeys = config('stripe.secret_keys', []);
         $stripeMode = config('stripe.mode', 'test');
         $stripeReady = is_array($stripeKeys) && !empty($stripeKeys[$stripeMode]);
@@ -83,14 +68,14 @@ class DashboardController extends Controller
                 'invoices' => $invoices,
                 'receivable_cents' => (int) $receivable,
                 'overdue' => $overdue,
-                'mrr_cents' => (int) $mrrCents,
-                'arr_cents' => (int) $arrCents,
+                'mrr_cents' => $mrrCents,
+                'arr_cents' => $arrCents,
                 'collection_rate' => $collectionRate,
                 'health' => [
-                    'queue' => $queueBacklog < 10 && $failedJobs === 0,
-                    'queue_backlog' => $queueBacklog,
-                    'failed_jobs' => $failedJobs,
-                    'stripe' => $stripeReady,
+                    'queue' => $health['queue'] === 'ok',
+                    'queue_backlog' => $health['queue_backlog'] ?? 0,
+                    'failed_jobs' => $health['failed_jobs'] ?? 0,
+                    'stripe' => $health['stripe'] === 'ok',
                 ],
             ],
             'health' => $health,
@@ -105,6 +90,8 @@ class DashboardController extends Controller
             'database' => 'ok',
             'queue' => 'ok',
             'stripe' => 'ok',
+            'queue_backlog' => 0,
+            'failed_jobs' => 0,
             'issues' => [],
         ];
 
@@ -116,29 +103,34 @@ class DashboardController extends Controller
             $status['issues'][] = 'Database connection failed';
         }
 
-        // Check queue (by checking if jobs table exists and is accessible)
+        // Check queue
         try {
-            $failedJobs = DB::table('failed_jobs')->count();
-            if ($failedJobs > 10) {
+            $status['queue_backlog'] = Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0;
+            $status['failed_jobs'] = Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
+
+            if ($status['failed_jobs'] > 0) {
+                $status['queue'] = 'error';
+                $status['issues'][] = "{$status['failed_jobs']} failed jobs in queue";
+            } elseif ($status['queue_backlog'] > 50) {
                 $status['queue'] = 'warning';
-                $status['issues'][] = "{$failedJobs} failed jobs in queue";
+                $status['issues'][] = "Large queue backlog ({$status['queue_backlog']})";
             }
         } catch (\Exception $e) {
-            // Queue might use different driver, that's ok
+            // Queue might use different driver
         }
 
         // Check Stripe configuration
         $stripeKey = config('stripe.secret');
         if (empty($stripeKey)) {
             $status['stripe'] = 'warning';
-            $status['issues'][] = 'Stripe not configured';
+            $status['issues'][] = 'Stripe secret key not configured';
         } elseif (app()->environment('production') && str_starts_with($stripeKey, 'sk_test_')) {
             $status['stripe'] = 'error';
-            $status['issues'][] = 'Test Stripe keys in production!';
+            $status['issues'][] = 'Test Stripe keys are being used in production';
         }
 
         // Determine overall status
-        if ($status['database'] === 'error' || $status['stripe'] === 'error') {
+        if ($status['database'] === 'error' || $status['stripe'] === 'error' || $status['queue'] === 'error') {
             $status['overall'] = 'error';
         } elseif ($status['queue'] === 'warning' || $status['stripe'] === 'warning') {
             $status['overall'] = 'warning';

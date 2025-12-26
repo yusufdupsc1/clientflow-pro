@@ -15,30 +15,25 @@ class RefundPayment
     /**
      * Refund a payment (full or partial).
      */
-    public function handle(Payment $payment, array $data = []): Payment
+    public function execute(Payment $payment, ?int $amountCents = null, ?string $reason = null): array
     {
-        $invoice = $payment->invoice;
-        $refundable = $payment->amount_cents - $payment->refunded_cents;
-        $amount = (int) ($data['amount_cents'] ?? $refundable);
-        $reason = $data['reason'] ?? null;
+        try {
+            $invoice = $payment->invoice;
+            $refundable = $payment->amount_cents - $payment->refunded_cents;
+            $amount = $amountCents ?? $refundable;
 
-        if ($amount <= 0) {
-            throw ValidationException::withMessages([
-                'amount_cents' => ['Refund amount must be greater than zero.'],
-            ]);
-        }
+            if ($amount <= 0) {
+                return ['success' => false, 'error' => 'Refund amount must be greater than zero.'];
+            }
 
-        if ($amount > $refundable) {
-            throw ValidationException::withMessages([
-                'amount_cents' => ['Cannot refund more than the captured amount.'],
-            ]);
-        }
+            if ($amount > $refundable) {
+                return ['success' => false, 'error' => 'Cannot refund more than the captured amount.'];
+            }
 
-        $refundId = $payment->stripe_refund_id;
-        $balanceTransaction = $payment->stripe_balance_transaction_id;
+            $refundId = $payment->stripe_refund_id;
+            $balanceTransaction = $payment->stripe_balance_transaction_id;
 
-        if ($payment->stripe_payment_intent_id) {
-            try {
+            if ($payment->stripe_payment_intent_id) {
                 $stripe = app(StripeService::class);
 
                 if ($invoice && $invoice->organization) {
@@ -54,57 +49,46 @@ class RefundPayment
 
                 $refundId = $refund->id ?? $refundId;
                 $balanceTransaction = $refund->balance_transaction ?? $balanceTransaction;
-            } catch (ApiErrorException $e) {
-                Log::error('stripe.refund_failed', [
-                    'payment_id' => $payment->id,
-                    'message' => $e->getMessage(),
-                ]);
-
-                throw ValidationException::withMessages([
-                    'stripe' => ['Stripe refund failed: ' . $e->getMessage()],
-                ]);
-            } catch (\Throwable $e) {
-                Log::error('stripe.refund_failed', [
-                    'payment_id' => $payment->id,
-                    'message' => $e->getMessage(),
-                ]);
-
-                throw ValidationException::withMessages([
-                    'stripe' => ['Stripe refund failed: ' . $e->getMessage()],
-                ]);
-            }
-        } else {
-            // Manual payment
-            $refundId = 'manual-' . uniqid();
-        }
-
-        $payment->forceFill([
-            'refunded_cents' => $payment->refunded_cents + $amount,
-            'refunded_at' => now(),
-            'stripe_refund_id' => $refundId,
-            'stripe_balance_transaction_id' => $balanceTransaction,
-        ])->save();
-
-        if ($invoice) {
-            $invoice->amount_paid_cents = max(0, $invoice->amount_paid_cents - $amount);
-
-            if ($invoice->amount_paid_cents < $invoice->total_cents) {
-                $invoice->paid_at = null;
-                $invoice->status = ($invoice->due_date && $invoice->due_date->isPast()) ? 'overdue' : 'sent';
+            } else {
+                // Manual payment
+                $refundId = 'manual-' . uniqid();
             }
 
-            $invoice->save();
+            $payment->forceFill([
+                'refunded_cents' => $payment->refunded_cents + $amount,
+                'refunded_at' => now(),
+                'stripe_refund_id' => $refundId,
+                'stripe_balance_transaction_id' => $balanceTransaction,
+            ])->save();
+
+            if ($invoice) {
+                $invoice->amount_paid_cents = max(0, $invoice->amount_paid_cents - $amount);
+
+                if ($invoice->amount_paid_cents < $invoice->total_cents) {
+                    $invoice->paid_at = null;
+                    $invoice->status = ($invoice->due_date && $invoice->due_date->isPast()) ? 'overdue' : 'sent';
+                }
+
+                $invoice->save();
+            }
+
+            ActivityLogger::log($payment, 'payments.refunded', $payment->organization_id, [
+                'payment_id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+                'amount_cents' => $amount,
+                'refunded_cents' => $payment->refunded_cents,
+                'stripe_refund_id' => $refundId,
+                'reason' => $reason,
+            ]);
+
+            return ['success' => true, 'payment' => $payment->fresh(['invoice'])];
+        } catch (\Exception $e) {
+            Log::error('stripe.refund_failed', [
+                'payment_id' => $payment->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'error' => $e->getMessage()];
         }
-
-        ActivityLogger::log($payment, 'payments.refunded', $payment->organization_id, [
-            'payment_id' => $payment->id,
-            'invoice_id' => $payment->invoice_id,
-            'amount_cents' => $amount,
-            'refunded_cents' => $payment->refunded_cents,
-            'stripe_refund_id' => $refundId,
-            'reason' => $reason,
-        ]);
-
-        return $payment->fresh(['invoice']);
     }
 }

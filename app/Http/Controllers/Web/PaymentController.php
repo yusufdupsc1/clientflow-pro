@@ -26,7 +26,7 @@ class PaymentController extends Controller
         $this->authorize('update', $payment->invoice);
 
         $validated = $request->validate([
-            'amount_cents' => ['nullable', 'integer', 'min:1', 'max:' . $payment->amount_cents],
+            'amount_cents' => ['nullable', 'integer', 'min:1', 'max:' . ($payment->amount_cents - $payment->refunded_cents)],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
